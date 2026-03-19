@@ -1,3 +1,42 @@
 spring:
   application:
     name: ai-content-studio-be
+  profiles:
+    active: dev
+
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+    
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/aicontent_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate # We will use Flyway for migrations
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+
+springdoc:
+  api-docs:
+    path: /api/v1/api-docs
+  swagger-ui:
+    path: /api/v1/docs
+    operationsSorter: method
+
+server:
+  port: ${PORT:8080}
+
+app:
+  cors:
+    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173}

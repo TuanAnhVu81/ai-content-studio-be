@@ -1,0 +1,18 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  jpa:
+    show-sql: false
+
+logging:
+  level:
+    com.portfolio.aicontentstudio: INFO
+    org.springframework.web: WARN
+  file:
+    name: logs/ai-content-studio.log
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 7
