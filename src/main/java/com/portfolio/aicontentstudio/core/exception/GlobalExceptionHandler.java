@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.dao.DataIntegrityViolationException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -52,9 +53,17 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(ErrorCode.ACCESS_DENIED.getCode(), ErrorCode.ACCESS_DENIED.getDefaultMessage()));
     }
 
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolationException(DataIntegrityViolationException ex) {
+        log.error("Database conflict (possible duplicate): {}", ex.getMessage());
+        return ResponseEntity
+                .status(ErrorCode.USER_ALREADY_EXISTS.getStatus())
+                .body(ApiResponse.error(ErrorCode.USER_ALREADY_EXISTS.getCode(), "Data conflict: possibly duplicate resource"));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGlobalException(Exception ex) {
-        log.error("Unhandled Exception: ", ex);
+        log.error("Unhandled Exception ({}): ", ex.getClass().getSimpleName(), ex);
         return ResponseEntity
                 .status(ErrorCode.INTERNAL_SERVER_ERROR.getStatus())
                 .body(ApiResponse.error(ErrorCode.INTERNAL_SERVER_ERROR.getCode(), ErrorCode.INTERNAL_SERVER_ERROR.getDefaultMessage()));
