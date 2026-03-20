@@ -13,7 +13,12 @@ public enum ErrorCode {
     EMAIL_ALREADY_EXISTS(409, "USER_003", "Email is already in use"),
     ROLE_NOT_FOUND(404, "USER_004", "Default role not found"),
     INVALID_REFRESH_TOKEN(401, "AUTH_001", "Invalid or expired refresh token"),
-    INVALID_CREDENTIALS(401, "AUTH_002", "Invalid email or password");
+    INVALID_CREDENTIALS(401, "AUTH_002", "Invalid email or password"),
+
+    // Campaign Errors
+    CAMPAIGN_NOT_FOUND(404, "CAMP_001", "Campaign not found"),
+    CAMPAIGN_NAME_DUPLICATE(409, "CAMP_002", "Campaign name already exists for this user"),
+    CAMPAIGN_ACCESS_DENIED(403, "CAMP_003", "You do not have permission to access this campaign");
 
     private final int status;
     private final String code;
