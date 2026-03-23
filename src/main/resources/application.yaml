@@ -1,6 +1,8 @@
 spring:
   application:
     name: ai-content-studio-be
+  config:
+    import: optional:file:.env[.properties], optional:file:.env
   profiles:
     active: dev
 
@@ -16,10 +18,14 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate # We will use Flyway for migrations
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
+
+  # flyway:
+  #   repair-on-migrate: true
+  #   validate-on-migrate: false
 
   data:
     redis:
@@ -28,8 +34,29 @@ spring:
       password: ${REDIS_PASSWORD}
   
   ai:
-    openai:
-      api-key: ${GEMINI_API_KEY}
+    model:
+      chat: ${AI_PROVIDER:google-genai}
+    # Daily development: use Google AI Studio free tier via API key.
+    google:
+      genai:
+        enabled: true
+        api-key: ${GEMINI_API_KEY:}
+        chat:
+          options:
+            model: ${GEMINI_MODEL:gemini-3-flash-preview}
+            temperature: 0.7
+    # Production/demo switch: set AI_PROVIDER=vertexai and keep the GCP settings below.
+    vertex:
+      ai:
+        gemini:
+          enabled: false
+          project-id: ${GCP_PROJECT_ID:}
+          location: ${GCP_LOCATION:us-central1}
+          credentials-uri: ${GCP_VERTEX_CREDENTIALS_URI:}
+          chat:
+            options:
+              model: ${GEMINI_MODEL:gemini-2.0-flash}
+              temperature: 0.7
 
 springdoc:
   api-docs:
@@ -44,6 +71,8 @@ server:
 app:
   cors:
     allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173}
+  ai:
+    model-name: ${GEMINI_MODEL:gemini-2.0-flash}
   jwt:
     secret: ${JWT_SECRET:supersecretkey_that_must_be_at_least_256bits_long_for_hs256}
     access-token-expiration: 1800000    # 30 minutes in milliseconds

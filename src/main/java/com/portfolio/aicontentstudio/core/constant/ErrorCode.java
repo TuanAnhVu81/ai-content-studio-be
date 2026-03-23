@@ -18,7 +18,11 @@ public enum ErrorCode {
     // Campaign Errors
     CAMPAIGN_NOT_FOUND(404, "CAMP_001", "Campaign not found"),
     CAMPAIGN_NAME_DUPLICATE(409, "CAMP_002", "Campaign name already exists for this user"),
-    CAMPAIGN_ACCESS_DENIED(403, "CAMP_003", "You do not have permission to access this campaign");
+    CAMPAIGN_ACCESS_DENIED(403, "CAMP_003", "You do not have permission to access this campaign"),
+
+    // Content & AI Errors
+    CONTENT_NOT_FOUND(404, "CONT_001", "Content not found"),
+    AI_GENERATION_FAILED(503, "AI_001", "AI content generation failed, please try again");
 
     private final int status;
     private final String code;

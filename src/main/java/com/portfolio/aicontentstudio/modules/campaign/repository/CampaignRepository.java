@@ -29,4 +29,7 @@ public interface CampaignRepository extends JpaRepository<Campaign, UUID> {
 
     // Check for duplicate name excluding the current record (for UPDATE operations)
     boolean existsByNameAndUserIdAndIdNot(String name, UUID userId, UUID id);
+
+    // Ownership check used by Content Service before calling Gemini API (prevents IDOR)
+    boolean existsByIdAndUserId(UUID id, UUID userId);
 }

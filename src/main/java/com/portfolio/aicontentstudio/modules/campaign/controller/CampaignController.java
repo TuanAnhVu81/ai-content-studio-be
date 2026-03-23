@@ -42,7 +42,7 @@ public class CampaignController {
     // GET /api/v1/campaigns?status=ACTIVE&page=0&size=10&sort=createdAt,desc
     @GetMapping
     public ResponseEntity<ApiResponse<Page<CampaignResponse>>> getMyCampaigns(
-            @RequestParam(required = false) CampaignStatus status,
+            @RequestParam(value = "status", required = false) CampaignStatus status,
             @ParameterObject @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         Page<CampaignResponse> response = campaignService.getMyCampaigns(status, pageable);
         return ResponseEntity.ok(ApiResponse.success("Campaigns retrieved successfully", response));
@@ -50,7 +50,7 @@ public class CampaignController {
 
     // GET /api/v1/campaigns/{id} - Get a single campaign (ownership verified)
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<CampaignResponse>> getCampaignById(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<CampaignResponse>> getCampaignById(@PathVariable("id") UUID id) {
         CampaignResponse response = campaignService.getCampaignById(id);
         return ResponseEntity.ok(ApiResponse.success("Campaign retrieved successfully", response));
     }
@@ -58,7 +58,7 @@ public class CampaignController {
     // PUT /api/v1/campaigns/{id} - Update a campaign (ownership verified)
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<CampaignResponse>> updateCampaign(
-            @PathVariable UUID id,
+            @PathVariable("id") UUID id,
             @Valid @RequestBody CampaignRequest request) {
         CampaignResponse response = campaignService.updateCampaign(id, request);
         return ResponseEntity.ok(ApiResponse.success("Campaign updated successfully", response));
@@ -66,7 +66,7 @@ public class CampaignController {
 
     // DELETE /api/v1/campaigns/{id} - Soft delete (ownership verified)
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteCampaign(@PathVariable UUID id) {
+    public ResponseEntity<Void> deleteCampaign(@PathVariable("id") UUID id) {
         campaignService.deleteCampaign(id);
         return ResponseEntity.noContent().build(); // HTTP 204
     }

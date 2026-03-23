@@ -43,6 +43,10 @@ public class AiUsageLog {
     @Builder.Default
     private Integer responseTokens = 0;
 
+    @Column(name = "total_tokens")
+    @Builder.Default
+    private Integer totalTokens = 0;
+
     @Column(name = "model_name", length = 100)
     private String modelName;
 
