@@ -1,8 +1,10 @@
 package com.portfolio.aicontentstudio.security;
 
 import com.portfolio.aicontentstudio.modules.user.entity.User;
+import com.portfolio.aicontentstudio.modules.user.entity.AccountStatus;
 import com.portfolio.aicontentstudio.modules.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -27,6 +29,10 @@ public class CustomUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+
+        if (user.getStatus() != AccountStatus.ACTIVE) {
+            throw new DisabledException("Your account has been disabled by an administrator");
+        }
 
         // Map Role entities to GrantedAuthority for Spring Security
         Set<SimpleGrantedAuthority> authorities = user.getRoles().stream()

@@ -12,6 +12,7 @@ public enum ErrorCode {
     USER_ALREADY_EXISTS(409, "USER_002", "User already exists"),
     EMAIL_ALREADY_EXISTS(409, "USER_003", "Email is already in use"),
     ROLE_NOT_FOUND(404, "USER_004", "Default role not found"),
+    USER_DISABLED(403, "USER_005", "Your account has been disabled by an administrator"),
     INVALID_REFRESH_TOKEN(401, "AUTH_001", "Invalid or expired refresh token"),
     INVALID_CREDENTIALS(401, "AUTH_002", "Invalid email or password"),
 

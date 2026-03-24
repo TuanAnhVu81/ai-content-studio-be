@@ -77,3 +77,6 @@ app:
     secret: ${JWT_SECRET:supersecretkey_that_must_be_at_least_256bits_long_for_hs256}
     access-token-expiration: 1800000    # 30 minutes in milliseconds
     refresh-token-expiration: 604800000 # 7 days in milliseconds
+  admin:
+    initial-email: ${ADMIN_INITIAL_EMAIL}
+    initial-password: ${ADMIN_INITIAL_PASSWORD}

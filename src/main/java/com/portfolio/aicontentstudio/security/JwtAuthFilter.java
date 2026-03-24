@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -25,6 +26,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtProvider jwtProvider;
     private final CustomUserDetailsService userDetailsService;
+    private final JwtAuthEntryPoint jwtAuthEntryPoint;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -33,16 +35,22 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         // Extract the Bearer token from the Authorization header
         String token = extractToken(request);
 
-        if (StringUtils.hasText(token) && jwtProvider.validateToken(token)) {
-            String email = jwtProvider.extractEmail(token);
+        try {
+            if (StringUtils.hasText(token) && jwtProvider.validateToken(token)) {
+                String email = jwtProvider.extractEmail(token);
 
-            // Load user details and set authentication in context
-            UserDetails userDetails = userDetailsService.loadUserByUsername(email);
-            UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                // Load user details and set authentication in context
+                UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            }
+        } catch (AuthenticationException ex) {
+            SecurityContextHolder.clearContext();
+            jwtAuthEntryPoint.commence(request, response, ex);
+            return;
         }
 
         filterChain.doFilter(request, response);
