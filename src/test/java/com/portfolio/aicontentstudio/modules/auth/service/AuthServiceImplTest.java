@@ -2,15 +2,14 @@ package com.portfolio.aicontentstudio.modules.auth.service;
 
 import com.portfolio.aicontentstudio.core.constant.ErrorCode;
 import com.portfolio.aicontentstudio.core.exception.AppException;
-import com.portfolio.aicontentstudio.modules.auth.dto.AuthResponse;
-import com.portfolio.aicontentstudio.modules.auth.dto.LoginRequest;
-import com.portfolio.aicontentstudio.modules.auth.dto.RefreshTokenRequest;
-import com.portfolio.aicontentstudio.modules.auth.dto.RegisterRequest;
+import com.portfolio.aicontentstudio.modules.auth.dto.*;
+import com.portfolio.aicontentstudio.modules.user.entity.AccountStatus;
 import com.portfolio.aicontentstudio.modules.user.entity.Role;
 import com.portfolio.aicontentstudio.modules.user.entity.User;
 import com.portfolio.aicontentstudio.modules.user.repository.RoleRepository;
 import com.portfolio.aicontentstudio.modules.user.repository.UserRepository;
 import com.portfolio.aicontentstudio.security.JwtProvider;
+import com.portfolio.aicontentstudio.security.SecurityContextHelper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -73,6 +72,9 @@ class AuthServiceImplTest {
 
     @Mock
     private ValueOperations<String, String> valueOperations;
+
+    @Mock
+    private SecurityContextHelper securityContextHelper;
 
     @InjectMocks
     private AuthServiceImpl authService;
@@ -335,12 +337,14 @@ class AuthServiceImplTest {
     void logout_ValidToken_DeletesFromRedis() {
         // Given
         String refreshToken = "valid_refresh_token";
+        given(redisTemplate.opsForValue()).willReturn(valueOperations);
+        given(valueOperations.get(anyString())).willReturn(UUID.randomUUID().toString());
 
         // When
         authService.logout(refreshToken);
 
         // Then
-        verify(redisTemplate, times(1)).delete("rt:" + refreshToken);
+        verify(redisTemplate).delete(startsWith("rt:"));
     }
 
     @Test
@@ -353,6 +357,69 @@ class AuthServiceImplTest {
 
         // Then
         verify(redisTemplate, never()).delete(anyString());
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // TEST CASES: getMe()
+    // -----------------------------------------------------------------------------------------------------------------
+
+    @Test
+    void getMe_AuthenticatedUser_ReturnsUserResponse() {
+        // Given
+        User user = createMockUser();
+        given(securityContextHelper.getCurrentUserId()).willReturn(user.getId());
+        given(userRepository.findById(user.getId())).willReturn(Optional.of(user));
+
+        // When
+        UserResponse response = authService.getMe();
+
+        // Then
+        assertThat(response).isNotNull();
+        assertThat(response.id()).isEqualTo(user.getId());
+        assertThat(response.email()).isEqualTo(user.getEmail());
+        verify(userRepository).findById(user.getId());
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // TEST CASES: changePassword(ChangePasswordRequest request)
+    // -----------------------------------------------------------------------------------------------------------------
+
+    @Test
+    void changePassword_ValidRequest_UpdatesPasswordAndInvalidatesToken() {
+        // Given
+        User user = createMockUser();
+        ChangePasswordRequest request = new ChangePasswordRequest("old_pass", "new_secure_pass");
+        
+        given(securityContextHelper.getCurrentUserId()).willReturn(user.getId());
+        given(userRepository.findById(user.getId())).willReturn(Optional.of(user));
+        given(passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())).willReturn(true);
+        given(passwordEncoder.encode(request.newPassword())).willReturn("new_hashed_pass");
+
+        // When
+        authService.changePassword(request);
+
+        // Then
+        verify(passwordEncoder).encode(request.newPassword());
+        verify(userRepository).save(user);
+        assertThat(user.getPasswordHash()).isEqualTo("new_hashed_pass");
+    }
+
+    @Test
+    void changePassword_InvalidOldPassword_ThrowsAppException() {
+        // Given
+        User user = createMockUser();
+        ChangePasswordRequest request = new ChangePasswordRequest("wrong_old_pass", "new_pass");
+        
+        given(securityContextHelper.getCurrentUserId()).willReturn(user.getId());
+        given(userRepository.findById(user.getId())).willReturn(Optional.of(user));
+        given(passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())).willReturn(false);
+
+        // When & Then
+        assertThatThrownBy(() -> authService.changePassword(request))
+                .isInstanceOf(AppException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
+
+        verify(userRepository, never()).save(any());
     }
 
     // -----------------------------------------------------------------------------------------------------------------

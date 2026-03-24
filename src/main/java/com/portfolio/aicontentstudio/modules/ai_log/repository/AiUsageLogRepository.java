@@ -64,4 +64,13 @@ public interface AiUsageLogRepository extends JpaRepository<AiUsageLog, UUID> {
     List<TopUserUsageResponse> findTopUsersByTokenUsage(@Param("from") LocalDateTime from,
                                                         @Param("to") LocalDateTime to,
                                                         Pageable pageable);
+
+    @Query("""
+            select coalesce(sum(l.totalTokens), 0L)
+            from AiUsageLog l
+            where l.user.id = :userId
+              and l.createdAt >= :since
+            """)
+    long sumTotalTokensByUserIdInLast30Days(@Param("userId") UUID userId,
+                                            @Param("since") LocalDateTime since);
 }

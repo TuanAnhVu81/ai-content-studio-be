@@ -27,6 +27,8 @@ public interface CampaignRepository extends JpaRepository<Campaign, UUID> {
     // Check for duplicate name within the same user scope
     boolean existsByNameAndUserId(String name, UUID userId);
 
+    long countByUserId(UUID userId);
+
     // Check for duplicate name excluding the current record (for UPDATE operations)
     boolean existsByNameAndUserIdAndIdNot(String name, UUID userId, UUID id);
 

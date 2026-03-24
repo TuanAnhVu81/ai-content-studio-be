@@ -5,6 +5,8 @@ import com.portfolio.aicontentstudio.modules.auth.dto.AuthResponse;
 import com.portfolio.aicontentstudio.modules.auth.dto.LoginRequest;
 import com.portfolio.aicontentstudio.modules.auth.dto.RefreshTokenRequest;
 import com.portfolio.aicontentstudio.modules.auth.dto.RegisterRequest;
+import com.portfolio.aicontentstudio.modules.auth.dto.UserResponse;
+import com.portfolio.aicontentstudio.modules.auth.dto.ChangePasswordRequest;
 import com.portfolio.aicontentstudio.modules.auth.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -45,5 +47,17 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Void>> logout(@Valid @RequestBody RefreshTokenRequest request) {
         authService.logout(request.refreshToken());
         return ResponseEntity.ok(ApiResponse.success("Logged out successfully", null));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<UserResponse>> getMe() {
+        UserResponse response = authService.getMe();
+        return ResponseEntity.ok(ApiResponse.success("Profile retrieved successfully", response));
+    }
+
+    @PatchMapping("/change-password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        authService.changePassword(request);
+        return ResponseEntity.ok(ApiResponse.success("Password changed successfully", null));
     }
 }

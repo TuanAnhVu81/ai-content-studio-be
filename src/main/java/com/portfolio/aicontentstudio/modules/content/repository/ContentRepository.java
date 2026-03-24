@@ -22,6 +22,10 @@ public interface ContentRepository extends JpaRepository<Content, UUID> {
     // Fetch all content belonging to a specific campaign owned by the user (IDOR-safe)
     Page<Content> findAllByCampaignIdAndUserId(UUID campaignId, UUID userId, Pageable pageable);
 
+    List<Content> findTop5ByUserIdOrderByCreatedAtDesc(UUID userId);
+
+    long countByUserId(UUID userId);
+
     // Fetch a single content item ensuring it belongs to the requesting user
     Optional<Content> findByIdAndUserId(UUID id, UUID userId);
 
