@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * Metadata for SEO scoring, stored as JSONB.
@@ -14,5 +15,11 @@ public record SeoMetadata(
     @Min(0) @Max(100) double score,
     @DecimalMin("0.0") @DecimalMax("100.0") double keywordDensity,
     boolean hasH1,
-    String suggestion
+    boolean hasH2,
+    int wordCount,
+    String metaTitle,
+    String metaDescription,
+    boolean metaTitleValid,
+    boolean metaDescriptionValid,
+    List<String> suggestions
 ) implements Serializable {}

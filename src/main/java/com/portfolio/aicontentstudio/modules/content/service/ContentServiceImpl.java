@@ -230,7 +230,13 @@ public class ContentServiceImpl implements ContentService {
                 sanitizedScore,
                 seoMetadata.keywordDensity(),
                 seoMetadata.hasH1(),
-                seoMetadata.suggestion()
+                seoMetadata.hasH2(),
+                seoMetadata.wordCount(),
+                seoMetadata.metaTitle(),
+                seoMetadata.metaDescription(),
+                seoMetadata.metaTitleValid(),
+                seoMetadata.metaDescriptionValid(),
+                seoMetadata.suggestions()
         );
     }
 }

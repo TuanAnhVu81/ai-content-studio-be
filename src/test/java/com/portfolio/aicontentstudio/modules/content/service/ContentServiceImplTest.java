@@ -379,9 +379,9 @@ class ContentServiceImplTest {
         Content content = createContent(contentId, campaignId, userId);
         UpdateContentRequest request = new UpdateContentRequest(
                 "Updated generated text",
-                new SeoMetadata(95.0, 2.1, false, "Add an H1 heading")
+                new SeoMetadata(95.0, 2.1, false, false, 0, null, null, false, false, List.of("Add an H1 heading"))
         );
-        ContentResponse expectedResponse = createContentResponse(contentId, campaignId, content.getTargetKeyword(), "Vietnamese", new SeoMetadata(60.0, 2.1, false, "Add an H1 heading"), null);
+        ContentResponse expectedResponse = createContentResponse(contentId, campaignId, content.getTargetKeyword(), "Vietnamese", new SeoMetadata(60.0, 2.1, false, false, 0, null, null, false, false, List.of("Add an H1 heading")), null);
 
         given(contentRepository.findByIdAndUserId(contentId, userId)).willReturn(Optional.of(content));
         given(contentRepository.save(any(Content.class))).willAnswer(invocation -> invocation.getArgument(0));
@@ -394,7 +394,7 @@ class ContentServiceImplTest {
         verify(contentRepository, times(1)).save(contentCaptor.capture());
         Content capturedContent = contentCaptor.getValue();
         assertThat(capturedContent.getGeneratedText()).isEqualTo("Updated generated text");
-        assertThat(capturedContent.getSeoMetadata()).isEqualTo(new SeoMetadata(60.0, 2.1, false, "Add an H1 heading"));
+        assertThat(capturedContent.getSeoMetadata()).isEqualTo(new SeoMetadata(60.0, 2.1, false, false, 0, null, null, false, false, List.of("Add an H1 heading")));
         assertThat(actualResponse).isEqualTo(expectedResponse);
     }
 
@@ -544,7 +544,7 @@ class ContentServiceImplTest {
                 .targetKeyword("student laptop deal")
                 .promptConfig(new PromptConfig("Facebook", "Friendly", "150", "Vietnamese"))
                 .generatedText("Existing generated text")
-                .seoMetadata(new SeoMetadata(70.0, 1.8, true, "Add one more heading"))
+                .seoMetadata(new SeoMetadata(70.0, 1.8, true, false, 0, null, null, false, false, List.of("Add one more heading")))
                 .status(ContentStatus.DRAFT)
                 .build();
         content.setId(contentId);
