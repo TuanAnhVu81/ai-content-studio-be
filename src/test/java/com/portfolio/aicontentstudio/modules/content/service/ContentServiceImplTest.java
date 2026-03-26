@@ -106,10 +106,19 @@ class ContentServiceImplTest {
         Campaign campaign = createCampaign(campaignId, userId);
         ContentResponse expectedResponse = createContentResponse(contentId, campaignId, request.keyword(), request.language(), null, null);
         ChatResponseMetadata metadata = createChatResponseMetadata("gemini-3-flash", 120, 250, 370);
+        String generatedOutput = """
+                Student Laptop Deal for Back-to-School Savings
+                Discover the best student laptop deal with reliable performance, long battery life, and affordable pricing for school and campus life.
+
+                # Student Laptop Deal for Smarter Campus Life
+                Generated content body.
+                ## Why This Student Laptop Deal Stands Out
+                More supporting content.
+                """;
 
         given(userRepository.findById(userId)).willReturn(Optional.of(user));
         given(campaignRepository.findByIdAndUserId(campaignId, userId)).willReturn(Optional.of(campaign));
-        given(chatModel.call(any(Prompt.class))).willReturn(createChatResponse("  Generated content body.  ", metadata));
+        given(chatModel.call(any(Prompt.class))).willReturn(createChatResponse(generatedOutput, metadata));
         given(contentRepository.save(any(Content.class))).willAnswer(invocation -> {
             Content captured = invocation.getArgument(0);
             captured.setId(contentId);
@@ -124,21 +133,41 @@ class ContentServiceImplTest {
         verify(chatModel, times(1)).call(promptCaptor.capture());
         Prompt capturedPrompt = promptCaptor.getValue();
         assertThat(capturedPrompt.getSystemMessage().getText())
-                .contains("Senior SEO Copywriter");
+                .contains("Senior SEO Copywriter")
+                .contains("The exact main keyword must appear in the H1")
+                .contains("Meta title must be 50-60 characters")
+                .contains("Meta description must be 120-160 characters")
+                .contains("Output format must be exactly");
         assertThat(capturedPrompt.getUserMessage().getText())
                 .contains("Platform: Facebook")
                 .contains("Tone: Friendly")
                 .contains("Main keyword: student laptop deal")
                 .contains("Length: 150 words")
-                .contains("Language: Vietnamese");
+                .contains("Language: Vietnamese")
+                .contains("<meta title only>")
+                .contains("<meta description only>")
+                .contains("# <H1 containing the exact main keyword>")
+                .contains("## <H2 section 1>")
+                .contains("## <H2 section 2>");
 
         verify(contentRepository, times(1)).save(contentCaptor.capture());
         Content capturedContent = contentCaptor.getValue();
         assertThat(capturedContent.getCampaign()).isEqualTo(campaign);
         assertThat(capturedContent.getUser()).isEqualTo(user);
         assertThat(capturedContent.getTargetKeyword()).isEqualTo(request.keyword());
-        assertThat(capturedContent.getGeneratedText()).isEqualTo("Generated content body.");
-        assertThat(capturedContent.getSeoMetadata()).isNull();
+        assertThat(capturedContent.getGeneratedText()).startsWith("# Student Laptop Deal for Smarter Campus Life");
+        assertThat(capturedContent.getSeoMetadata()).isEqualTo(new SeoMetadata(
+                0.0,
+                0.0,
+                false,
+                false,
+                0,
+                "Student Laptop Deal for Back-to-School Savings",
+                "Discover the best student laptop deal with reliable performance, long battery life, and affordable pricing for school and campus life.",
+                false,
+                false,
+                List.of()
+        ));
         assertThat(capturedContent.getStatus()).isEqualTo(ContentStatus.DRAFT);
         assertThat(capturedContent.getPromptConfig()).isEqualTo(new PromptConfig("Facebook", "Friendly", "150", "Vietnamese"));
 
@@ -178,6 +207,8 @@ class ContentServiceImplTest {
         verify(contentRepository, times(1)).save(contentCaptor.capture());
         Content capturedContent = contentCaptor.getValue();
         assertThat(capturedContent.getPromptConfig()).isEqualTo(new PromptConfig("Facebook", "Friendly", "auto", "English"));
+        assertThat(capturedContent.getGeneratedText()).isEqualTo("Generated content body.");
+        assertThat(capturedContent.getSeoMetadata()).isNull();
 
         verify(aiUsageLogService, times(1)).logUsage(user, capturedContent, null, null, null, "gemini-test-model");
         assertThat(actualResponse).isEqualTo(expectedResponse);
