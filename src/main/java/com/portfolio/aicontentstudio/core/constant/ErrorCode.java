@@ -15,6 +15,7 @@ public enum ErrorCode {
     USER_DISABLED(403, "USER_005", "Your account has been disabled by an administrator"),
     INVALID_REFRESH_TOKEN(401, "AUTH_001", "Invalid or expired refresh token"),
     INVALID_CREDENTIALS(401, "AUTH_002", "Invalid email or password"),
+    REFRESH_TOKEN_REUSE_DETECTED(401, "AUTH_003", "Refresh token reuse detected. All sessions have been revoked"),
 
     // Campaign Errors
     CAMPAIGN_NOT_FOUND(404, "CAMP_001", "Campaign not found"),

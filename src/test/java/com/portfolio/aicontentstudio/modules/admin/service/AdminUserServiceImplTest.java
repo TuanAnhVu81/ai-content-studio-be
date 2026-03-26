@@ -2,6 +2,7 @@ package com.portfolio.aicontentstudio.modules.admin.service;
 
 import com.portfolio.aicontentstudio.core.constant.ErrorCode;
 import com.portfolio.aicontentstudio.core.exception.AppException;
+import com.portfolio.aicontentstudio.modules.auth.service.RefreshTokenSessionService;
 import com.portfolio.aicontentstudio.modules.admin.dto.AdminUserResponse;
 import com.portfolio.aicontentstudio.modules.admin.dto.UpdateUserStatusRequest;
 import com.portfolio.aicontentstudio.modules.user.entity.AccountStatus;
@@ -49,6 +50,9 @@ class AdminUserServiceImplTest {
 
     @Mock
     private AdminAuditLogService adminAuditLogService;
+
+    @Mock
+    private RefreshTokenSessionService refreshTokenSessionService;
 
     @InjectMocks
     private AdminUserServiceImpl adminUserService;
@@ -113,6 +117,7 @@ class AdminUserServiceImplTest {
 
         // Then
         verify(userRepository, times(1)).save(userCaptor.capture());
+        verify(refreshTokenSessionService, times(1)).revokeAllSessions(userId);
         verify(adminAuditLogService, times(1)).logAction(adminId, "UPDATE_USER_STATUS", userId, "Violation");
 
         User capturedUser = userCaptor.getValue();
@@ -138,6 +143,7 @@ class AdminUserServiceImplTest {
 
         verify(userRepository, never()).save(any(User.class));
         verify(adminAuditLogService, never()).logAction(any(UUID.class), any(String.class), any(UUID.class), any(String.class));
+        verify(refreshTokenSessionService, never()).revokeAllSessions(any(UUID.class));
     }
 
     @Test
@@ -156,6 +162,7 @@ class AdminUserServiceImplTest {
 
         verify(userRepository, never()).findById(any(UUID.class));
         verify(adminAuditLogService, never()).logAction(any(UUID.class), any(String.class), any(UUID.class), any(String.class));
+        verify(refreshTokenSessionService, never()).revokeAllSessions(any(UUID.class));
     }
 
     // -----------------------------------------------------------------------------------------------------------------

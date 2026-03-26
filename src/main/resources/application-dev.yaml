@@ -14,3 +14,9 @@ logging:
     com.portfolio.aicontentstudio: DEBUG
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG
+
+app:
+  auth:
+    refresh-cookie:
+      secure: false
+      same-site: Lax

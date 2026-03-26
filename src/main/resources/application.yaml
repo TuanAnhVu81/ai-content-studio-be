@@ -73,8 +73,19 @@ app:
     allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173}
   ai:
     model-name: ${GEMINI_MODEL:gemini-2.0-flash}
+  auth:
+    refresh-cookie:
+      name: ${REFRESH_COOKIE_NAME:refresh_token}
+      secure: ${REFRESH_COOKIE_SECURE:true}
+      same-site: ${REFRESH_COOKIE_SAME_SITE:None}
+      path: ${REFRESH_COOKIE_PATH:/api/v1/auth}
+      domain: ${REFRESH_COOKIE_DOMAIN:}
+      max-age-seconds: ${REFRESH_COOKIE_MAX_AGE_SECONDS:604800}
+    session:
+      max-active-sessions-per-user: ${AUTH_MAX_ACTIVE_SESSIONS_PER_USER:5}
+      lock-timeout-seconds: ${AUTH_SESSION_LOCK_TIMEOUT_SECONDS:5}
   jwt:
-    secret: ${JWT_SECRET:supersecretkey_that_must_be_at_least_256bits_long_for_hs256}
+    secret: ${JWT_SECRET}
     access-token-expiration: 1800000    # 30 minutes in milliseconds
     refresh-token-expiration: 604800000 # 7 days in milliseconds
   admin:

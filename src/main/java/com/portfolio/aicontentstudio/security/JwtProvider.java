@@ -1,5 +1,6 @@
 package com.portfolio.aicontentstudio.security;
 
+import jakarta.annotation.PostConstruct;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -8,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
@@ -27,6 +29,13 @@ public class JwtProvider {
 
     @Value("${app.jwt.access-token-expiration}")
     private long accessTokenExpiration;
+
+    @PostConstruct
+    void validateConfiguration() {
+        if (!StringUtils.hasText(jwtSecret) || jwtSecret.length() < 32) {
+            throw new IllegalStateException("JWT secret must be configured and contain at least 32 characters");
+        }
+    }
 
     // Derive a secure signing key from the configured secret
     private SecretKey getSigningKey() {

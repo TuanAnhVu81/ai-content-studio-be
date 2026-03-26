@@ -19,11 +19,6 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**") // Apply to all API endpoints
-                .allowedOrigins(allowedOrigins.toArray(new String[0]))
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
-                .allowedHeaders("*")
-                .allowCredentials(true) // Required for Cookie-based Refresh Tokens
-                .maxAge(3600); // 1 hour cache for pre-flight response
+        // CORS is now handled in SecurityConfig to integrate with Spring Security filter chain
     }
 }

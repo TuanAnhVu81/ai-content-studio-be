@@ -2,6 +2,7 @@ package com.portfolio.aicontentstudio.modules.admin.service;
 
 import com.portfolio.aicontentstudio.core.constant.ErrorCode;
 import com.portfolio.aicontentstudio.core.exception.AppException;
+import com.portfolio.aicontentstudio.modules.auth.service.RefreshTokenSessionService;
 import com.portfolio.aicontentstudio.modules.admin.dto.AdminUserResponse;
 import com.portfolio.aicontentstudio.modules.admin.dto.UpdateUserStatusRequest;
 import com.portfolio.aicontentstudio.modules.user.entity.AccountStatus;
@@ -29,6 +30,7 @@ public class AdminUserServiceImpl implements AdminUserService {
     private final UserRepository userRepository;
     private final SecurityContextHelper securityContextHelper;
     private final AdminAuditLogService adminAuditLogService;
+    private final RefreshTokenSessionService refreshTokenSessionService;
 
     @Override
     @Transactional(readOnly = true)
@@ -52,6 +54,9 @@ public class AdminUserServiceImpl implements AdminUserService {
 
         user.setStatus(request.status());
         User savedUser = userRepository.save(user);
+        if (request.status() == AccountStatus.INACTIVE) {
+            refreshTokenSessionService.revokeAllSessions(savedUser.getId());
+        }
         adminAuditLogService.logAction(currentAdminId, ACTION_UPDATE_USER_STATUS, savedUser.getId(), request.reason());
 
         log.info("Admin updated user status: adminId={}, targetUserId={}, status={}", currentAdminId, userId, request.status());
