@@ -12,7 +12,8 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface ContentMapper {
 
-    // Map campaign.id and user.id from lazy-loaded JPA relations to flat UUIDs in DTO
+    // Flatten nested entity fields into DTO
     @Mapping(target = "campaignId", expression = "java(content.getCampaign().getId())")
+    @Mapping(target = "campaignName", expression = "java(content.getCampaign().getName())")
     ContentResponse toResponse(Content content);
 }

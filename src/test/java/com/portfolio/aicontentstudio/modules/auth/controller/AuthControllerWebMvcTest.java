@@ -50,6 +50,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/**
+ * Integration Test for AuthController using MockMvc to verify REST endpoints,
+ * cookie handling, and targeted CSRF protection filters.
+ */
 @WebMvcTest(controllers = AuthController.class)
 @Import({SecurityConfig.class, GlobalExceptionHandler.class})
 class AuthControllerWebMvcTest {
@@ -87,6 +91,10 @@ class AuthControllerWebMvcTest {
             return null;
         }).when(jwtAuthFilter).doFilter(any(), any(), any());
     }
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // TEST CASES: login(LoginRequest request, HttpServletRequest httpServletRequest)
+    // -----------------------------------------------------------------------------------------------------------------
 
     @Test
     void loginSuccess_WithCsrfToken_SetsRefreshCookieAndReturnsAccessToken() throws Exception {
@@ -137,6 +145,10 @@ class AuthControllerWebMvcTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error_code").value(ErrorCode.INVALID_CREDENTIALS.getCode()));
     }
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // TEST CASES: refresh(HttpServletRequest httpServletRequest)
+    // -----------------------------------------------------------------------------------------------------------------
 
     @Test
     void refreshSuccess_WithCookieAndCsrf_ReturnsNewAccessTokenAndRotatesCookie() throws Exception {
@@ -196,6 +208,10 @@ class AuthControllerWebMvcTest {
                 .andExpect(jsonPath("$.error_code").value(ErrorCode.INVALID_REFRESH_TOKEN.getCode()));
     }
 
+    // -----------------------------------------------------------------------------------------------------------------
+    // TEST CASES: logout(HttpServletRequest httpServletRequest)
+    // -----------------------------------------------------------------------------------------------------------------
+
     @Test
     void logoutSuccess_ClearsCookieAndRevokesCurrentSession() throws Exception {
         // Given
@@ -221,6 +237,10 @@ class AuthControllerWebMvcTest {
 
         verify(authService, times(1)).logout("existing-refresh-token");
     }
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // TEST CASES: changePassword(ChangePasswordRequest request)
+    // -----------------------------------------------------------------------------------------------------------------
 
     @Test
     void changePasswordSuccess_ClearsCookieAndReturnsOk() throws Exception {
@@ -248,6 +268,10 @@ class AuthControllerWebMvcTest {
 
         verify(authService, times(1)).changePassword(new ChangePasswordRequest("old-pass", "new-pass-123"));
     }
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // PRIVATE HELPERS & DATA GENERATORS
+    // -----------------------------------------------------------------------------------------------------------------
 
     private CsrfTestData fetchCsrfData() throws Exception {
         MvcResult csrfResult = mockMvc.perform(get("/api/v1/auth/csrf"))

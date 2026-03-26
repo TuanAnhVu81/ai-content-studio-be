@@ -1,6 +1,7 @@
 package com.portfolio.aicontentstudio.modules.content.repository;
 
 import com.portfolio.aicontentstudio.modules.content.entity.Content;
+import com.portfolio.aicontentstudio.modules.dashboard.dto.RecentContentSummaryResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -22,7 +23,22 @@ public interface ContentRepository extends JpaRepository<Content, UUID> {
     // Fetch all content belonging to a specific campaign owned by the user (IDOR-safe)
     Page<Content> findAllByCampaignIdAndUserId(UUID campaignId, UUID userId, Pageable pageable);
 
-    List<Content> findTop5ByUserIdOrderByCreatedAtDesc(UUID userId);
+    @Query("""
+            select new com.portfolio.aicontentstudio.modules.dashboard.dto.RecentContentSummaryResponse(
+                c.id,
+                campaign.id,
+                campaign.name,
+                c.targetKeyword,
+                c.status,
+                c.createdAt,
+                c.updatedAt
+            )
+            from Content c
+            join c.campaign campaign
+            where c.user.id = :userId
+            order by c.createdAt desc
+            """)
+    List<RecentContentSummaryResponse> findRecentContentSummariesByUserId(@Param("userId") UUID userId, Pageable pageable);
 
     long countByUserId(UUID userId);
 

@@ -557,6 +557,7 @@ class ContentServiceImplTest {
         return new ContentResponse(
                 contentId,
                 campaignId,
+                "Campaign Alpha",
                 keyword,
                 new PromptConfig("Facebook", "Friendly", "150", language),
                 "Mapped content response",

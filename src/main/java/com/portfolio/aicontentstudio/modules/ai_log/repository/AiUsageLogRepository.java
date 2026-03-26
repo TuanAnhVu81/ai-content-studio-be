@@ -66,11 +66,11 @@ public interface AiUsageLogRepository extends JpaRepository<AiUsageLog, UUID> {
                                                         Pageable pageable);
 
     @Query("""
-            select coalesce(sum(l.totalTokens), 0L)
+            select sum(l.totalTokens)
             from AiUsageLog l
             where l.user.id = :userId
               and l.createdAt >= :since
             """)
-    long sumTotalTokensByUserIdInLast30Days(@Param("userId") UUID userId,
+    Long sumTotalTokensByUserIdInLast30Days(@Param("userId") UUID userId,
                                             @Param("since") LocalDateTime since);
 }

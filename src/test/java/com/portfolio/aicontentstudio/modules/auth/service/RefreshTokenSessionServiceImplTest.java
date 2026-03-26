@@ -40,6 +40,10 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+/**
+ * Pure Unit Test for RefreshTokenSessionServiceImpl using JUnit 5, Mockito, and AssertJ.
+ * Focuses on Redis-based session management, token rotation, and reuse detection.
+ */
 @ExtendWith(MockitoExtension.class)
 class RefreshTokenSessionServiceImplTest {
 
@@ -68,6 +72,10 @@ class RefreshTokenSessionServiceImplTest {
         refreshTokenSessionService = new RefreshTokenSessionServiceImpl(redisTemplate, objectMapper, authSessionProperties);
         ReflectionTestUtils.setField(refreshTokenSessionService, "refreshTokenExpirationMs", 604800000L);
     }
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // TEST CASES: rotateSession(String refreshToken, ClientMetadata clientMetadata)
+    // -----------------------------------------------------------------------------------------------------------------
 
     @Test
     void rotateSession_ActiveTokenExists_RotatesTokenAndMarksOldTokenUsed() throws Exception {
@@ -127,6 +135,10 @@ class RefreshTokenSessionServiceImplTest {
         verify(redisTemplate, times(1)).delete("auth:user-sessions:" + userId);
         verify(zSetOperations, times(1)).remove("auth:user-sessions:" + userId, sessionId.toString());
     }
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // TEST CASES: revokeCurrentSession(String refreshToken)
+    // -----------------------------------------------------------------------------------------------------------------
 
     @Test
     void revokeCurrentSession_MissingActiveToken_DoesNothing() {
@@ -203,6 +215,10 @@ class RefreshTokenSessionServiceImplTest {
                 .hasMessage("Refresh token rotation is already in progress")
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_REFRESH_TOKEN);
     }
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // PRIVATE HELPERS & DATA GENERATORS
+    // -----------------------------------------------------------------------------------------------------------------
 
     private RefreshSessionData createActiveSessionData(UUID sessionId, UUID userId, String tokenHash) {
         long now = Instant.now().toEpochMilli();
