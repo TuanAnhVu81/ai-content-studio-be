@@ -165,6 +165,27 @@ class AdminUserServiceImplTest {
         verify(refreshTokenSessionService, never()).revokeAllSessions(any(UUID.class));
     }
 
+    @Test
+    void updateUserStatus_BlankReason_ThrowsInvalidInput() {
+        // Given
+        UUID adminId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UpdateUserStatusRequest request = new UpdateUserStatusRequest(AccountStatus.INACTIVE, "   ");
+
+        given(securityContextHelper.getCurrentUserId()).willReturn(adminId);
+
+        // When
+        // Then
+        assertThatThrownBy(() -> adminUserService.updateUserStatus(userId, request))
+                .isInstanceOf(AppException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
+
+        verify(userRepository, never()).findById(any(UUID.class));
+        verify(userRepository, never()).save(any(User.class));
+        verify(adminAuditLogService, never()).logAction(any(UUID.class), any(String.class), any(UUID.class), any(String.class));
+        verify(refreshTokenSessionService, never()).revokeAllSessions(any(UUID.class));
+    }
+
     // -----------------------------------------------------------------------------------------------------------------
     // DATA GENERATORS
     // -----------------------------------------------------------------------------------------------------------------

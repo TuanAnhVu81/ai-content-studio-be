@@ -10,6 +10,7 @@ import com.portfolio.aicontentstudio.modules.campaign.entity.CampaignStatus;
 import com.portfolio.aicontentstudio.modules.campaign.repository.CampaignRepository;
 import com.portfolio.aicontentstudio.modules.content.entity.Content;
 import com.portfolio.aicontentstudio.modules.content.entity.ContentStatus;
+import com.portfolio.aicontentstudio.modules.content.repository.CampaignContentCountView;
 import com.portfolio.aicontentstudio.modules.content.repository.ContentRepository;
 import com.portfolio.aicontentstudio.modules.user.entity.User;
 import com.portfolio.aicontentstudio.modules.user.repository.UserRepository;
@@ -75,6 +76,8 @@ class AdminSystemServiceImplTest {
 
         given(campaignRepository.findAll(pageable)).willReturn(new PageImpl<>(List.of(campaign), pageable, 1));
         given(userRepository.findAllById(List.of(userId))).willReturn(List.of(owner));
+        given(contentRepository.countByCampaignIds(List.of(campaign.getId())))
+                .willReturn(List.of(createCampaignContentCountView(campaign.getId(), 3L)));
 
         // When
         Page<AdminCampaignResponse> result = adminSystemService.getAllCampaigns(pageable);
@@ -83,6 +86,7 @@ class AdminSystemServiceImplTest {
         verify(campaignRepository, times(1)).findAll(pageable);
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().get(0).ownerEmail()).isEqualTo("owner@example.com");
+        assertThat(result.getContent().get(0).contentCount()).isEqualTo(3L);
     }
 
     // -----------------------------------------------------------------------------------------------------------------
@@ -184,5 +188,19 @@ class AdminSystemServiceImplTest {
         user.setEmail(email);
         user.setFullName("Owner User");
         return user;
+    }
+
+    private CampaignContentCountView createCampaignContentCountView(UUID campaignId, long contentCount) {
+        return new CampaignContentCountView() {
+            @Override
+            public UUID getCampaignId() {
+                return campaignId;
+            }
+
+            @Override
+            public long getContentCount() {
+                return contentCount;
+            }
+        };
     }
 }

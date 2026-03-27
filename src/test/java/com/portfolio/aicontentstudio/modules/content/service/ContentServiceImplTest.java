@@ -134,24 +134,25 @@ class ContentServiceImplTest {
         Prompt capturedPrompt = promptCaptor.getValue();
         assertThat(capturedPrompt.getSystemMessage().getText())
                 .contains("Senior SEO Copywriter")
-                .contains("The exact main keyword must appear in the H1")
+                .contains("Use the exact main keyword in the meta title, meta description, and H1")
+                .contains("Keep exact-keyword density roughly between 1% and 3%")
                 .contains("Meta title must be 50-60 characters")
                 .contains("Meta description must be 120-160 characters")
-                .contains("Include exactly one H1 heading using Markdown syntax with bold text: # **Heading**")
-                .contains("Include at least two H2 headings using Markdown syntax with bold text: ## **Heading**")
-                .contains("Bold the H1 and H2 heading text")
-                .contains("Output format must be exactly");
+                .contains("Line 4 onward: Markdown body starting with exactly one H1 in this format: # **Heading**")
+                .contains("Every H2 must use this format: ## **Heading**");
         assertThat(capturedPrompt.getUserMessage().getText())
                 .contains("Platform: Facebook")
                 .contains("Tone: Friendly")
                 .contains("Main keyword: student laptop deal")
-                .contains("Length: 150 words")
+                .contains("Target length: 150 words")
                 .contains("Language: Vietnamese")
+                .contains("Exact keyword usage target: 1 to 2 exact-match mentions")
+                .contains("Length guidance: aim for around 150 words while keeping the copy natural")
+                .contains("Keep exact-keyword usage close to the target above")
                 .contains("<meta title only>")
                 .contains("<meta description only>")
                 .contains("# **<H1 containing the exact main keyword>**")
-                .contains("## **<H2 section 1>**")
-                .contains("## **<H2 section 2>**");
+                .contains("<body with at least two ## **H2** sections>");
 
         verify(contentRepository, times(1)).save(contentCaptor.capture());
         Content capturedContent = contentCaptor.getValue();

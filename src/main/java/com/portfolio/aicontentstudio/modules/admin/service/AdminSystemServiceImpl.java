@@ -7,6 +7,7 @@ import com.portfolio.aicontentstudio.modules.admin.dto.AdminRecentContentRespons
 import com.portfolio.aicontentstudio.modules.campaign.entity.Campaign;
 import com.portfolio.aicontentstudio.modules.campaign.repository.CampaignRepository;
 import com.portfolio.aicontentstudio.modules.content.entity.Content;
+import com.portfolio.aicontentstudio.modules.content.repository.CampaignContentCountView;
 import com.portfolio.aicontentstudio.modules.content.repository.ContentRepository;
 import com.portfolio.aicontentstudio.modules.user.entity.User;
 import com.portfolio.aicontentstudio.modules.user.repository.UserRepository;
@@ -42,6 +43,7 @@ public class AdminSystemServiceImpl implements AdminSystemService {
     public Page<AdminCampaignResponse> getAllCampaigns(Pageable pageable) {
         Page<Campaign> campaigns = campaignRepository.findAll(pageable);
         Map<UUID, String> userEmails = resolveUserEmails(campaigns.getContent());
+        Map<UUID, Long> contentCounts = resolveContentCounts(campaigns.getContent());
 
         return campaigns.map(campaign -> new AdminCampaignResponse(
                 campaign.getId(),
@@ -50,6 +52,7 @@ public class AdminSystemServiceImpl implements AdminSystemService {
                 campaign.getMetadata(),
                 campaign.getUserId(),
                 userEmails.getOrDefault(campaign.getUserId(), "unknown"),
+                contentCounts.getOrDefault(campaign.getId(), 0L),
                 campaign.getCreatedAt(),
                 campaign.getUpdatedAt()
         ));
@@ -103,6 +106,23 @@ public class AdminSystemServiceImpl implements AdminSystemService {
         }
 
         return userEmails;
+    }
+
+    private Map<UUID, Long> resolveContentCounts(List<Campaign> campaigns) {
+        Map<UUID, Long> contentCounts = new HashMap<>();
+        List<UUID> campaignIds = campaigns.stream()
+                .map(Campaign::getId)
+                .toList();
+
+        if (campaignIds.isEmpty()) {
+            return contentCounts;
+        }
+
+        for (CampaignContentCountView row : contentRepository.countByCampaignIds(campaignIds)) {
+            contentCounts.put(row.getCampaignId(), row.getContentCount());
+        }
+
+        return contentCounts;
     }
 
     private String buildPreview(String generatedText) {

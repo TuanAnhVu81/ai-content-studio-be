@@ -40,6 +40,14 @@ public interface ContentRepository extends JpaRepository<Content, UUID> {
             """)
     List<RecentContentSummaryResponse> findRecentContentSummariesByUserId(@Param("userId") UUID userId, Pageable pageable);
 
+    @Query("""
+            select c.campaign.id as campaignId, count(c) as contentCount
+            from Content c
+            where c.campaign.id in :campaignIds
+            group by c.campaign.id
+            """)
+    List<CampaignContentCountView> countByCampaignIds(@Param("campaignIds") List<UUID> campaignIds);
+
     long countByUserId(UUID userId);
 
     // Fetch a single content item ensuring it belongs to the requesting user

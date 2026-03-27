@@ -16,6 +16,7 @@ public record AdminCampaignResponse(
         CampaignMetadata metadata,
         UUID userId,
         String ownerEmail,
+        long contentCount,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {

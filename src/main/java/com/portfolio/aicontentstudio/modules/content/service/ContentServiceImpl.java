@@ -45,103 +45,64 @@ public class ContentServiceImpl implements ContentService {
 
     private static final String SYSTEM_PROMPT_TEMPLATE = """
         You are a Senior SEO Copywriter and On-Page SEO Specialist.
-        Write publish-ready marketing content that reads naturally and is optimized to score as high as possible on this SEO checklist:
+        Write natural, publish-ready marketing content that scores well on this SEO checklist.
 
-        - The exact main keyword must appear in the H1.
-        - Keyword density should be roughly between 1% and 3%.
-        - Include at least two H2 headings.
-        - Content should exceed 300 words when the platform supports article-style writing.
-        - Meta title must be 50-60 characters and include the exact main keyword.
-        - Meta description must be 120-160 characters and include the exact main keyword.
+        Non-negotiable requirements:
+        - Use the exact main keyword in the meta title, meta description, and H1.
+        - Keep exact-keyword density roughly between 1% and 3%.
+        - Include exactly one H1 and at least two H2 headings.
+        - For article-style content, exceed 300 words.
+        - Meta title must be 50-60 characters.
+        - Meta description must be 120-160 characters.
 
-        Follow these rules strictly:
-        - Return only the final content with no explanation, no commentary, and no labels.
-        - Do not output labels such as "Meta Title", "Meta Description", "H1", or "CTA".
-        - Do not output XML, JSON, tags, brackets, or code fences.
-        - Write in the requested language.
-        - Sound natural, persuasive, and editorial, not robotic.
-        - Avoid keyword stuffing, but ensure the exact main keyword appears naturally in strategic places.
-        - Include exactly one H1 heading using Markdown syntax with bold text: # **Heading**
-        - Include at least two H2 headings using Markdown syntax with bold text: ## **Heading**
-        - Make the body scannable, specific, conversion-oriented, and visually engaging in an editor.
-        - Keep paragraphs short, usually 2 to 4 sentences.
-        - Add at least one Markdown bullet list when it fits naturally.
-        - Bold the H1 and H2 heading text, and bold 2 to 4 additional important phrases naturally using Markdown bold syntax.
-        - Avoid large walls of text and keep a strong visual rhythm.
+        Writing rules:
+        - Sound human, editorial, persuasive, and not robotic.
+        - Avoid keyword stuffing. Use the exact keyword in strategic positions, then use natural related wording elsewhere.
+        - Keep paragraphs short and scannable.
+        - Add one Markdown bullet list when it fits naturally.
+        - Bold all H1/H2 text and 2 to 4 additional important phrases naturally.
         - End with a concise CTA when appropriate.
 
-        Output format must be exactly:
-        1. First line: meta title only
-        2. Second line: meta description only
-        3. Third line: blank line
-        4. Fourth line onward: Markdown content body beginning with exactly one H1
-
-        Hard requirements:
-        - Line 1 must be a valid meta title, 50-60 characters, with the exact main keyword.
-        - Line 2 must be a valid meta description, 120-160 characters, with the exact main keyword.
-        - The H1 must contain the exact main keyword naturally.
-        - The article must contain at least two H2 headings.
-        - The exact main keyword must appear once in the introduction, once in a middle section, and once near the conclusion when natural.
-        - For article-style content of 350-600 words, the exact main keyword should usually appear about 4 to 6 times naturally.
-        - The article should normally be 350-600 words unless the requested platform strongly requires shorter copy.
+        Output rules:
+        - Return only the final content. No explanations, no labels, no JSON/XML, no code fences.
+        - Line 1: meta title only.
+        - Line 2: meta description only.
+        - Line 3: blank line.
+        - Line 4 onward: Markdown body starting with exactly one H1 in this format: # **Heading**
+        - Every H2 must use this format: ## **Heading**
         """;
 
     private static final String USER_PROMPT_TEMPLATE = """
         Create marketing content with these inputs:
-
         - Platform: {platform}
         - Tone: {tone}
         - Main keyword: {keyword}
-        - Length: {length_limit}
+        - Target length: {length_limit}
         - Language: {language}
+        - Exact keyword usage target: {keyword_usage_target}
+        - Length guidance: {length_guidance}
 
-        Optimize the result to maximize all of these checks:
+        Optimize for this checker:
         - Keyword appears in H1
         - Keyword density between 1% and 3%
         - At least two H2 headings
-        - Content length above 300 words
         - Meta title is valid
         - Meta description is valid
 
         Additional instructions:
-        - Use the exact main keyword in the meta title, meta description, and H1.
-        - Make the meta title compelling and clickable, not just keyword-heavy.
-        - Make the meta description persuasive and natural.
-        - The H1 should read like a real headline, not a forced SEO phrase.
-        - The H2 headings should be meaningful and editorial.
-        - Keep paragraph flow smooth and human.
-        - Open with a strong hook paragraph.
-        - Keep each paragraph concise and easy to scan.
-        - Add one natural Markdown bullet list if the topic allows it.
-        - Use Markdown bold to emphasize 2 to 4 important phrases naturally.
-        - Avoid repeating the exact keyword unnaturally in every paragraph.
-        - After using the exact keyword in strategic locations, use natural related wording elsewhere.
-        - Use the exact main keyword once in the introduction, once in a middle section, and once near the ending when natural.
-        - If the content is article-style, aim to use the exact main keyword around 4 to 6 times naturally.
+        - Write in the requested language.
+        - Make the meta title compelling and the meta description persuasive.
+        - Make the H1 read like a real headline, not a forced SEO phrase.
+        - Use the exact keyword once in the introduction, once in a middle section, and once near the conclusion when natural.
+        - Keep exact-keyword usage close to the target above.
+        - Open with a strong hook and keep flow smooth and human.
 
-        Return the final result in this exact structure only:
-
+        Return only this structure:
         <meta title only>
         <meta description only>
 
         # **<H1 containing the exact main keyword>**
-        <opening paragraph>
-        ## **<H2 section 1>**
-        <supporting paragraph(s)>
-        ## **<H2 section 2>**
-        <supporting paragraph(s)>
-        <optional CTA>
-
-        Example structure only:
-        Best Smart Home Device for Modern Living
-        Discover the best smart home device for comfort, security, and convenience with practical tips to upgrade your home more intelligently today.
-
-        # **Best Smart Home Device for Smarter Daily Living**
-        ...
-        ## **Why the Best Smart Home Device Matters**
-        ...
-        ## **How to Choose the Best Smart Home Device**
-        ...
+        <body with at least two ## **H2** sections>
         """;
 
     private final CampaignRepository campaignRepository;
@@ -257,7 +218,9 @@ public class ContentServiceImpl implements ContentService {
                 "tone", request.tone(),
                 "keyword", request.keyword(),
                 "length_limit", request.lengthLimit() != null ? request.lengthLimit() + " words" : "platform-appropriate",
-                "language", request.language()
+                "language", request.language(),
+                "keyword_usage_target", buildKeywordUsageTarget(request.lengthLimit()),
+                "length_guidance", buildLengthGuidance(request.lengthLimit())
         );
 
         SystemPromptTemplate systemPromptTemplate = new SystemPromptTemplate(SYSTEM_PROMPT_TEMPLATE);
@@ -275,7 +238,7 @@ public class ContentServiceImpl implements ContentService {
                 request.lengthLimit() != null ? request.lengthLimit().toString() : "auto",
                 request.language()
         );
-}
+    }
 
     private GeneratedContentParts extractGeneratedContentParts(ChatResponse chatResponse) {
         if (chatResponse == null || chatResponse.getResult() == null || chatResponse.getResult().getOutput() == null) {
@@ -358,6 +321,38 @@ public class ContentServiceImpl implements ContentService {
                 seoMetadata.metaDescriptionValid(),
                 seoMetadata.suggestions()
         );
+    }
+
+    private String buildKeywordUsageTarget(Integer lengthLimit) {
+        if (lengthLimit == null) {
+            return "usually 4 to 6 exact-match mentions for a 350-600 word article";
+        }
+
+        if (lengthLimit < 180) {
+            return "1 to 2 exact-match mentions";
+        }
+
+        if (lengthLimit < 300) {
+            return "2 to 3 exact-match mentions";
+        }
+
+        if (lengthLimit < 450) {
+            return "3 to 4 exact-match mentions";
+        }
+
+        if (lengthLimit < 650) {
+            return "4 to 6 exact-match mentions";
+        }
+
+        return "5 to 7 exact-match mentions";
+    }
+
+    private String buildLengthGuidance(Integer lengthLimit) {
+        if (lengthLimit == null) {
+            return "if the platform supports article-style writing, aim for roughly 350-600 words";
+        }
+
+        return "aim for around " + lengthLimit + " words while keeping the copy natural";
     }
 
     private record GeneratedContentParts(String body, SeoMetadata seoMetadata) {

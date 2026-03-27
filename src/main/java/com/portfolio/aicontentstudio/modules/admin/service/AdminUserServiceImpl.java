@@ -36,17 +36,33 @@ public class AdminUserServiceImpl implements AdminUserService {
     @Transactional(readOnly = true)
     public Page<AdminUserResponse> getUsers(String email, AccountStatus status, Pageable pageable) {
         String normalizedEmail = normalizeEmailFilter(email);
-        return userRepository.searchUsersForAdmin(normalizedEmail, status, pageable)
-                .map(this::toResponse);
+        Page<User> users;
+
+        if (normalizedEmail == null && status == null) {
+            users = userRepository.findAll(pageable);
+        } else if (normalizedEmail == null) {
+            users = userRepository.findAllByStatus(status, pageable);
+        } else if (status == null) {
+            users = userRepository.searchUsersByEmailForAdmin(normalizedEmail, pageable);
+        } else {
+            users = userRepository.searchUsersByEmailAndStatusForAdmin(normalizedEmail, status, pageable);
+        }
+
+        return users.map(this::toResponse);
     }
 
     @Override
     @Transactional
     public AdminUserResponse updateUserStatus(UUID userId, UpdateUserStatusRequest request) {
         UUID currentAdminId = securityContextHelper.getCurrentUserId();
+        String normalizedReason = normalizeReason(request.reason());
 
         if (currentAdminId.equals(userId) && request.status() == AccountStatus.INACTIVE) {
             throw new AppException(ErrorCode.ACCESS_DENIED, "Admin cannot deactivate the current account");
+        }
+
+        if (normalizedReason == null) {
+            throw new AppException(ErrorCode.INVALID_INPUT, "reason is required");
         }
 
         User user = userRepository.findById(userId)
@@ -57,7 +73,7 @@ public class AdminUserServiceImpl implements AdminUserService {
         if (request.status() == AccountStatus.INACTIVE) {
             refreshTokenSessionService.revokeAllSessions(savedUser.getId());
         }
-        adminAuditLogService.logAction(currentAdminId, ACTION_UPDATE_USER_STATUS, savedUser.getId(), request.reason());
+        adminAuditLogService.logAction(currentAdminId, ACTION_UPDATE_USER_STATUS, savedUser.getId(), normalizedReason);
 
         log.info("Admin updated user status: adminId={}, targetUserId={}, status={}", currentAdminId, userId, request.status());
         return toResponse(savedUser);
@@ -84,5 +100,12 @@ public class AdminUserServiceImpl implements AdminUserService {
             return null;
         }
         return email.trim();
+    }
+
+    private String normalizeReason(String reason) {
+        if (reason == null || reason.isBlank()) {
+            return null;
+        }
+        return reason.trim();
     }
 }

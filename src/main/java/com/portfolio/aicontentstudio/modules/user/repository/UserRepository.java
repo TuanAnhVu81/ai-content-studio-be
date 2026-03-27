@@ -21,13 +21,22 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     boolean existsByEmail(String email);
     boolean existsByRoles_Name(String roleName);
 
+    Page<User> findAllByStatus(AccountStatus status, Pageable pageable);
+
     @Query("""
             select u
             from User u
-            where (:email is null or lower(u.email) like lower(concat('%', :email, '%')))
-              and (:status is null or u.status = :status)
+            where lower(coalesce(u.email, '')) like concat('%', lower(:email), '%')
             """)
-    Page<User> searchUsersForAdmin(@Param("email") String email,
-                                   @Param("status") AccountStatus status,
-                                   Pageable pageable);
+    Page<User> searchUsersByEmailForAdmin(@Param("email") String email, Pageable pageable);
+
+    @Query("""
+            select u
+            from User u
+            where lower(coalesce(u.email, '')) like concat('%', lower(:email), '%')
+              and u.status = :status
+            """)
+    Page<User> searchUsersByEmailAndStatusForAdmin(@Param("email") String email,
+                                                   @Param("status") AccountStatus status,
+                                                   Pageable pageable);
 }
