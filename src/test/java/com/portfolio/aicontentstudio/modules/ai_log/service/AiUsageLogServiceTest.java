@@ -1,7 +1,5 @@
 package com.portfolio.aicontentstudio.modules.ai_log.service;
 
-import com.portfolio.aicontentstudio.modules.ai_log.entity.AiUsageLog;
-import com.portfolio.aicontentstudio.modules.ai_log.repository.AiUsageLogRepository;
 import com.portfolio.aicontentstudio.modules.content.entity.Content;
 import com.portfolio.aicontentstudio.modules.user.entity.AccountStatus;
 import com.portfolio.aicontentstudio.modules.user.entity.User;
@@ -16,34 +14,32 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 /**
  * Pure Unit Test for AiUsageLogService using JUnit 5, Mockito, and AssertJ.
- * Focuses on async-safe persistence behavior and default token normalization.
+ * Focuses on after-commit orchestration and command normalization.
  */
 @ExtendWith(MockitoExtension.class)
 class AiUsageLogServiceTest {
 
     @Mock
-    private AiUsageLogRepository aiUsageLogRepository;
+    private AiUsageLogAsyncWriter aiUsageLogAsyncWriter;
 
     @InjectMocks
     private AiUsageLogService aiUsageLogService;
 
     @Captor
-    private ArgumentCaptor<AiUsageLog> usageLogCaptor;
+    private ArgumentCaptor<AiUsageLogCommand> commandCaptor;
 
     // -----------------------------------------------------------------------------------------------------------------
     // TEST CASES: logUsage(User user, Content content, Integer promptTokens, Integer responseTokens, Integer totalTokens, String modelName)
     // -----------------------------------------------------------------------------------------------------------------
 
     @Test
-    void logUsage_AllValuesPresent_SavesUsageLog() {
+    void logUsage_NoActiveTransaction_DelegatesToAsyncWriterImmediately() {
         // Given
         User user = createUser();
         Content content = createContent();
@@ -52,18 +48,18 @@ class AiUsageLogServiceTest {
         aiUsageLogService.logUsage(user, content, 120, 250, 370, "gemini-3-flash");
 
         // Then
-        verify(aiUsageLogRepository, times(1)).save(usageLogCaptor.capture());
-        AiUsageLog capturedLog = usageLogCaptor.getValue();
-        assertThat(capturedLog.getUser()).isEqualTo(user);
-        assertThat(capturedLog.getContent()).isEqualTo(content);
-        assertThat(capturedLog.getPromptTokens()).isEqualTo(120);
-        assertThat(capturedLog.getResponseTokens()).isEqualTo(250);
-        assertThat(capturedLog.getTotalTokens()).isEqualTo(370);
-        assertThat(capturedLog.getModelName()).isEqualTo("gemini-3-flash");
+        verify(aiUsageLogAsyncWriter, times(1)).persistUsage(commandCaptor.capture());
+        AiUsageLogCommand capturedCommand = commandCaptor.getValue();
+        assertThat(capturedCommand.userId()).isEqualTo(user.getId());
+        assertThat(capturedCommand.contentId()).isEqualTo(content.getId());
+        assertThat(capturedCommand.promptTokens()).isEqualTo(120);
+        assertThat(capturedCommand.responseTokens()).isEqualTo(250);
+        assertThat(capturedCommand.totalTokens()).isEqualTo(370);
+        assertThat(capturedCommand.modelName()).isEqualTo("gemini-3-flash");
     }
 
     @Test
-    void logUsage_NullTokenValues_DefaultsMissingValuesToZero() {
+    void logUsage_NullTokenValues_StillDelegatesCommandWithNullsForWriterNormalization() {
         // Given
         User user = createUser();
         Content content = createContent();
@@ -72,24 +68,29 @@ class AiUsageLogServiceTest {
         aiUsageLogService.logUsage(user, content, null, null, null, "gemini-3-flash");
 
         // Then
-        verify(aiUsageLogRepository, times(1)).save(usageLogCaptor.capture());
-        AiUsageLog capturedLog = usageLogCaptor.getValue();
-        assertThat(capturedLog.getPromptTokens()).isZero();
-        assertThat(capturedLog.getResponseTokens()).isZero();
-        assertThat(capturedLog.getTotalTokens()).isZero();
+        verify(aiUsageLogAsyncWriter, times(1)).persistUsage(commandCaptor.capture());
+        AiUsageLogCommand capturedCommand = commandCaptor.getValue();
+        assertThat(capturedCommand.promptTokens()).isNull();
+        assertThat(capturedCommand.responseTokens()).isNull();
+        assertThat(capturedCommand.totalTokens()).isNull();
     }
 
     @Test
-    void logUsage_RepositoryThrowsException_DoesNotPropagateException() {
+    void logUsage_UserIdMissing_SkipsLogging() {
         // Given
-        User user = createUser();
+        User user = User.builder()
+                .email("tester@example.com")
+                .passwordHash("encoded-password")
+                .fullName("Test User")
+                .status(AccountStatus.ACTIVE)
+                .build();
         Content content = createContent();
-        given(aiUsageLogRepository.save(any(AiUsageLog.class))).willThrow(new RuntimeException("DB error"));
 
         // When
+        aiUsageLogService.logUsage(user, content, 120, 250, 370, "gemini-3-flash");
+
         // Then
-        assertThatCode(() -> aiUsageLogService.logUsage(user, content, 120, 250, 370, "gemini-3-flash"))
-                .doesNotThrowAnyException();
+        verify(aiUsageLogAsyncWriter, never()).persistUsage(commandCaptor.capture());
     }
 
     // -----------------------------------------------------------------------------------------------------------------

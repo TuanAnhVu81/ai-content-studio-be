@@ -22,11 +22,16 @@ public interface AiUsageLogRepository extends JpaRepository<AiUsageLog, UUID> {
             select new com.portfolio.aicontentstudio.modules.admin.dto.AiUsageAggregate(
                 coalesce(sum(l.promptTokens), 0L),
                 coalesce(sum(l.responseTokens), 0L),
-                coalesce(sum(l.totalTokens), 0L)
+                coalesce(sum(
+                    case
+                        when coalesce(l.totalTokens, 0) > 0 then l.totalTokens
+                        else coalesce(l.promptTokens, 0) + coalesce(l.responseTokens, 0)
+                    end
+                ), 0L)
             )
             from AiUsageLog l
-            where (cast(:from as localdatetime) is null or l.createdAt >= :from)
-              and (cast(:to as localdatetime) is null or l.createdAt <= :to)
+            where l.createdAt >= :from
+              and l.createdAt <= :to
             """)
     AiUsageAggregate aggregateUsage(@Param("from") LocalDateTime from,
                                     @Param("to") LocalDateTime to);
@@ -34,13 +39,18 @@ public interface AiUsageLogRepository extends JpaRepository<AiUsageLog, UUID> {
     @Query("""
             select new com.portfolio.aicontentstudio.modules.admin.dto.ModelUsageResponse(
                 coalesce(l.modelName, 'unknown'),
-                coalesce(sum(l.totalTokens), 0L)
+                coalesce(sum(
+                    case
+                        when coalesce(l.totalTokens, 0) > 0 then l.totalTokens
+                        else coalesce(l.promptTokens, 0) + coalesce(l.responseTokens, 0)
+                    end
+                ), 0L)
             )
             from AiUsageLog l
-            where (cast(:from as localdatetime) is null or l.createdAt >= :from)
-              and (cast(:to as localdatetime) is null or l.createdAt <= :to)
+            where l.createdAt >= :from
+              and l.createdAt <= :to
             group by coalesce(l.modelName, 'unknown')
-            order by coalesce(sum(l.totalTokens), 0L) desc
+            order by 2 desc
             """)
     List<ModelUsageResponse> aggregateUsageByModel(@Param("from") LocalDateTime from,
                                                    @Param("to") LocalDateTime to);
@@ -50,23 +60,33 @@ public interface AiUsageLogRepository extends JpaRepository<AiUsageLog, UUID> {
                 u.id,
                 u.email,
                 u.fullName,
-                coalesce(sum(l.totalTokens), 0L),
+                coalesce(sum(
+                    case
+                        when coalesce(l.totalTokens, 0) > 0 then l.totalTokens
+                        else coalesce(l.promptTokens, 0) + coalesce(l.responseTokens, 0)
+                    end
+                ), 0L),
                 coalesce(sum(l.promptTokens), 0L),
                 coalesce(sum(l.responseTokens), 0L)
             )
             from AiUsageLog l
             join l.user u
-            where (cast(:from as localdatetime) is null or l.createdAt >= :from)
-              and (cast(:to as localdatetime) is null or l.createdAt <= :to)
+            where l.createdAt >= :from
+              and l.createdAt <= :to
             group by u.id, u.email, u.fullName
-            order by coalesce(sum(l.totalTokens), 0L) desc
+            order by 4 desc
             """)
     List<TopUserUsageResponse> findTopUsersByTokenUsage(@Param("from") LocalDateTime from,
                                                         @Param("to") LocalDateTime to,
                                                         Pageable pageable);
 
     @Query("""
-            select sum(l.totalTokens)
+            select sum(
+                case
+                    when coalesce(l.totalTokens, 0) > 0 then l.totalTokens
+                    else coalesce(l.promptTokens, 0) + coalesce(l.responseTokens, 0)
+                end
+            )
             from AiUsageLog l
             where l.user.id = :userId
               and l.createdAt >= :since

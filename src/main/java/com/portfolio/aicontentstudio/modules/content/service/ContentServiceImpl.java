@@ -61,12 +61,12 @@ public class ContentServiceImpl implements ContentService {
         - Write in the requested language.
         - Sound natural, persuasive, and editorial, not robotic.
         - Avoid keyword stuffing, but ensure the exact main keyword appears naturally in strategic places.
-        - Include exactly one H1 heading using Markdown syntax: # Heading
-        - Include at least two H2 headings using Markdown syntax: ## Heading
+        - Include exactly one H1 heading using Markdown syntax with bold text: # **Heading**
+        - Include at least two H2 headings using Markdown syntax with bold text: ## **Heading**
         - Make the body scannable, specific, conversion-oriented, and visually engaging in an editor.
         - Keep paragraphs short, usually 2 to 4 sentences.
         - Add at least one Markdown bullet list when it fits naturally.
-        - Bold 2 to 4 important phrases naturally using Markdown bold syntax.
+        - Bold the H1 and H2 heading text, and bold 2 to 4 additional important phrases naturally using Markdown bold syntax.
         - Avoid large walls of text and keep a strong visual rhythm.
         - End with a concise CTA when appropriate.
 
@@ -124,11 +124,11 @@ public class ContentServiceImpl implements ContentService {
         <meta title only>
         <meta description only>
 
-        # <H1 containing the exact main keyword>
+        # **<H1 containing the exact main keyword>**
         <opening paragraph>
-        ## <H2 section 1>
+        ## **<H2 section 1>**
         <supporting paragraph(s)>
-        ## <H2 section 2>
+        ## **<H2 section 2>**
         <supporting paragraph(s)>
         <optional CTA>
 
@@ -136,11 +136,11 @@ public class ContentServiceImpl implements ContentService {
         Best Smart Home Device for Modern Living
         Discover the best smart home device for comfort, security, and convenience with practical tips to upgrade your home more intelligently today.
 
-        # Best Smart Home Device for Smarter Daily Living
+        # **Best Smart Home Device for Smarter Daily Living**
         ...
-        ## Why the Best Smart Home Device Matters
+        ## **Why the Best Smart Home Device Matters**
         ...
-        ## How to Choose the Best Smart Home Device
+        ## **How to Choose the Best Smart Home Device**
         ...
         """;
 

@@ -23,7 +23,11 @@ public class AdminStatsServiceImpl implements AdminStatsService {
     @Override
     @Transactional(readOnly = true)
     public AiUsageStatsResponse getAiUsageStats(LocalDateTime from, LocalDateTime to) {
-        AiUsageAggregate aggregate = aiUsageLogRepository.aggregateUsage(from, to);
+        // Normalize nullable date params before hitting repository to enable index usage
+        LocalDateTime resolvedFrom = from != null ? from : LocalDateTime.of(2000, 1, 1, 0, 0);
+        LocalDateTime resolvedTo = to != null ? to : LocalDateTime.now();
+
+        AiUsageAggregate aggregate = aiUsageLogRepository.aggregateUsage(resolvedFrom, resolvedTo);
         AiUsageAggregate safeAggregate = aggregate != null ? aggregate : new AiUsageAggregate(0L, 0L, 0L);
 
         return new AiUsageStatsResponse(
@@ -32,13 +36,16 @@ public class AdminStatsServiceImpl implements AdminStatsService {
                 safeAggregate.totalPromptTokens(),
                 safeAggregate.totalResponseTokens(),
                 safeAggregate.totalTokens(),
-                aiUsageLogRepository.aggregateUsageByModel(from, to)
+                aiUsageLogRepository.aggregateUsageByModel(resolvedFrom, resolvedTo)
         );
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<TopUserUsageResponse> getTopUsers(LocalDateTime from, LocalDateTime to) {
-        return aiUsageLogRepository.findTopUsersByTokenUsage(from, to, PageRequest.of(0, TOP_USERS_LIMIT));
+        // Normalize nullable date params before hitting repository to enable index usage
+        LocalDateTime resolvedFrom = from != null ? from : LocalDateTime.of(2000, 1, 1, 0, 0);
+        LocalDateTime resolvedTo = to != null ? to : LocalDateTime.now();
+        return aiUsageLogRepository.findTopUsersByTokenUsage(resolvedFrom, resolvedTo, PageRequest.of(0, TOP_USERS_LIMIT));
     }
 }

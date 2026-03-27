@@ -137,6 +137,9 @@ class ContentServiceImplTest {
                 .contains("The exact main keyword must appear in the H1")
                 .contains("Meta title must be 50-60 characters")
                 .contains("Meta description must be 120-160 characters")
+                .contains("Include exactly one H1 heading using Markdown syntax with bold text: # **Heading**")
+                .contains("Include at least two H2 headings using Markdown syntax with bold text: ## **Heading**")
+                .contains("Bold the H1 and H2 heading text")
                 .contains("Output format must be exactly");
         assertThat(capturedPrompt.getUserMessage().getText())
                 .contains("Platform: Facebook")
@@ -146,9 +149,9 @@ class ContentServiceImplTest {
                 .contains("Language: Vietnamese")
                 .contains("<meta title only>")
                 .contains("<meta description only>")
-                .contains("# <H1 containing the exact main keyword>")
-                .contains("## <H2 section 1>")
-                .contains("## <H2 section 2>");
+                .contains("# **<H1 containing the exact main keyword>**")
+                .contains("## **<H2 section 1>**")
+                .contains("## **<H2 section 2>**");
 
         verify(contentRepository, times(1)).save(contentCaptor.capture());
         Content capturedContent = contentCaptor.getValue();
