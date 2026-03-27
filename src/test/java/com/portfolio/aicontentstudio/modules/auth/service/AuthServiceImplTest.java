@@ -137,7 +137,7 @@ class AuthServiceImplTest {
 
         given(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .willReturn(new UsernamePasswordAuthenticationToken(request.email(), request.password()));
-        given(userRepository.findByEmail(request.email())).willReturn(Optional.of(user));
+        given(userRepository.findWithRolesByEmail(request.email())).willReturn(Optional.of(user));
         given(userDetailsService.loadUserByUsername(request.email())).willReturn(userDetails);
         given(jwtProvider.generateAccessToken(userDetails)).willReturn("access_token");
         given(refreshTokenSessionService.createSession(user.getId(), clientMetadata)).willReturn(refreshSessionResult);
@@ -199,7 +199,7 @@ class AuthServiceImplTest {
         RefreshSessionResult refreshSessionResult = new RefreshSessionResult(UUID.randomUUID(), user.getId(), "rotated_refresh_token");
 
         given(refreshTokenSessionService.rotateSession("raw_refresh_token", clientMetadata)).willReturn(refreshSessionResult);
-        given(userRepository.findById(user.getId())).willReturn(Optional.of(user));
+        given(userRepository.findWithRolesById(user.getId())).willReturn(Optional.of(user));
         given(userDetailsService.loadUserByUsername(user.getEmail())).willReturn(userDetails);
         given(jwtProvider.generateAccessToken(userDetails)).willReturn("new_access_token");
 
@@ -220,7 +220,7 @@ class AuthServiceImplTest {
         RefreshSessionResult refreshSessionResult = new RefreshSessionResult(UUID.randomUUID(), user.getId(), "rotated_refresh_token");
 
         given(refreshTokenSessionService.rotateSession("raw_refresh_token", clientMetadata)).willReturn(refreshSessionResult);
-        given(userRepository.findById(user.getId())).willReturn(Optional.of(user));
+        given(userRepository.findWithRolesById(user.getId())).willReturn(Optional.of(user));
 
         // When
         // Then
@@ -257,7 +257,7 @@ class AuthServiceImplTest {
         // Given
         User user = createMockUser(AccountStatus.ACTIVE);
         given(securityContextHelper.getCurrentUserId()).willReturn(user.getId());
-        given(userRepository.findById(user.getId())).willReturn(Optional.of(user));
+        given(userRepository.findWithRolesById(user.getId())).willReturn(Optional.of(user));
 
         // When
         UserResponse response = authService.getMe();

@@ -82,7 +82,7 @@ public class AuthServiceImpl implements AuthService {
             throw new AppException(ErrorCode.INVALID_CREDENTIALS);
         }
 
-        User user = userRepository.findByEmail(request.email())
+        User user = userRepository.findWithRolesByEmail(request.email())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
         UserDetails userDetails = userDetailsService.loadUserByUsername(request.email());
 
@@ -96,7 +96,7 @@ public class AuthServiceImpl implements AuthService {
     public AuthSessionResult refreshToken(String refreshToken, ClientMetadata clientMetadata) {
         RefreshSessionResult refreshSessionResult = refreshTokenSessionService.rotateSession(refreshToken, clientMetadata);
 
-        User user = userRepository.findById(refreshSessionResult.userId())
+        User user = userRepository.findWithRolesById(refreshSessionResult.userId())
                 .orElseThrow(() -> {
                     refreshTokenSessionService.revokeAllSessions(refreshSessionResult.userId());
                     return new AppException(ErrorCode.USER_NOT_FOUND);
@@ -122,7 +122,7 @@ public class AuthServiceImpl implements AuthService {
     @Transactional(readOnly = true)
     public UserResponse getMe() {
         UUID userId = securityContextHelper.getCurrentUserId();
-        User user = userRepository.findById(userId)
+        User user = userRepository.findWithRolesById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         return toUserResponse(user);

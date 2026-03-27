@@ -3,6 +3,7 @@ package com.portfolio.aicontentstudio.modules.user.entity;
 import com.portfolio.aicontentstudio.core.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -33,12 +34,13 @@ public class User extends BaseEntity {
     @Builder.Default
     private AccountStatus status = AccountStatus.ACTIVE;
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "user_roles",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
+    @BatchSize(size = 25)
     @Builder.Default
     private Set<Role> roles = new HashSet<>();
 }

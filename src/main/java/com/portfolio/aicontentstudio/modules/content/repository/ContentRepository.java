@@ -21,6 +21,7 @@ import java.util.UUID;
 public interface ContentRepository extends JpaRepository<Content, UUID> {
 
     // Fetch all content belonging to a specific campaign owned by the user (IDOR-safe)
+    @EntityGraph(attributePaths = {"campaign"})
     Page<Content> findAllByCampaignIdAndUserId(UUID campaignId, UUID userId, Pageable pageable);
 
     @Query("""
@@ -51,6 +52,7 @@ public interface ContentRepository extends JpaRepository<Content, UUID> {
     long countByUserId(UUID userId);
 
     // Fetch a single content item ensuring it belongs to the requesting user
+    @EntityGraph(attributePaths = {"campaign"})
     Optional<Content> findByIdAndUserId(UUID id, UUID userId);
 
     @EntityGraph(attributePaths = {"campaign", "user"})
