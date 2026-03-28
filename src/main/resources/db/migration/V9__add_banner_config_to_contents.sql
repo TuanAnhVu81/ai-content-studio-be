@@ -1,0 +1,2 @@
+ALTER TABLE contents
+ADD COLUMN IF NOT EXISTS banner_config JSONB;

@@ -1,6 +1,7 @@
 package com.portfolio.aicontentstudio.modules.content.entity;
 
 import com.portfolio.aicontentstudio.core.entity.BaseEntity;
+import com.portfolio.aicontentstudio.modules.content.dto.BannerConfig;
 import com.portfolio.aicontentstudio.modules.campaign.entity.Campaign;
 import com.portfolio.aicontentstudio.modules.content.dto.PromptConfig;
 import com.portfolio.aicontentstudio.modules.content.dto.SeoMetadata;
@@ -53,6 +54,10 @@ public class Content extends BaseEntity {
 
     @Column(name = "banner_url", length = 500)
     private String bannerUrl;
+
+    @Type(JsonBinaryType.class)
+    @Column(name = "banner_config", columnDefinition = "jsonb")
+    private BannerConfig bannerConfig;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)

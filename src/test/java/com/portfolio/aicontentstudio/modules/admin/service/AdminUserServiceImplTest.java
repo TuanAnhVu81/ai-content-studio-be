@@ -71,13 +71,13 @@ class AdminUserServiceImplTest {
         User user = createMockUser(UUID.randomUUID(), AccountStatus.ACTIVE);
         Page<User> userPage = new PageImpl<>(List.of(user));
 
-        given(userRepository.searchUsersForAdmin("user@example.com", AccountStatus.ACTIVE, pageable)).willReturn(userPage);
+        given(userRepository.searchUsersByEmailAndStatusForAdmin("user@example.com", AccountStatus.ACTIVE, pageable)).willReturn(userPage);
 
         // When
         Page<AdminUserResponse> result = adminUserService.getUsers("user@example.com", AccountStatus.ACTIVE, pageable);
 
         // Then
-        verify(userRepository, times(1)).searchUsersForAdmin("user@example.com", AccountStatus.ACTIVE, pageable);
+        verify(userRepository, times(1)).searchUsersByEmailAndStatusForAdmin("user@example.com", AccountStatus.ACTIVE, pageable);
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().get(0).roles()).containsExactly("ROLE_USER");
     }
@@ -86,13 +86,13 @@ class AdminUserServiceImplTest {
     void getUsers_BlankEmailFilter_NormalizesToNull() {
         // Given
         Pageable pageable = PageRequest.of(0, 10);
-        given(userRepository.searchUsersForAdmin(null, null, pageable)).willReturn(Page.empty(pageable));
+        given(userRepository.findAll(pageable)).willReturn(Page.empty(pageable));
 
         // When
         Page<AdminUserResponse> result = adminUserService.getUsers("   ", null, pageable);
 
         // Then
-        verify(userRepository, times(1)).searchUsersForAdmin(null, null, pageable);
+        verify(userRepository, times(1)).findAll(pageable);
         assertThat(result.getContent()).isEmpty();
     }
 

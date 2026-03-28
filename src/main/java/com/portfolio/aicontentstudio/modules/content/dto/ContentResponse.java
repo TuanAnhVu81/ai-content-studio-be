@@ -21,6 +21,7 @@ public record ContentResponse(
         String generatedText,
         SeoMetadata seoMetadata,
         String bannerUrl,
+        BannerConfig bannerConfig,
         ContentStatus status,
         LocalDateTime createdAt,
         LocalDateTime updatedAt

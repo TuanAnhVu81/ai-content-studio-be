@@ -1,5 +1,6 @@
 package com.portfolio.aicontentstudio.modules.content.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 
 /**
@@ -9,5 +10,8 @@ import jakarta.validation.constraints.NotBlank;
 public record UpdateBannerRequest(
 
         @NotBlank(message = "banner_url cannot be blank")
-        String bannerUrl
+        String bannerUrl,
+
+        @Valid
+        BannerConfig bannerConfig
 ) {}

@@ -44,65 +44,39 @@ public class ContentServiceImpl implements ContentService {
     private static final double MAX_SCORE_WITHOUT_H1 = 60.0;
 
     private static final String SYSTEM_PROMPT_TEMPLATE = """
-        You are a Senior SEO Copywriter and On-Page SEO Specialist.
-        Write natural, publish-ready marketing content that scores well on this SEO checklist.
+        You are the backend prompt engine of an AI Content Studio.
+        Your job is to transform structured form inputs into publish-ready marketing copy that matches the requested platform, tone, and length.
 
-        Non-negotiable requirements:
-        - Use the exact main keyword in the meta title, meta description, and H1.
-        - Keep exact-keyword density roughly between 1% and 3%.
-        - Include exactly one H1 and at least two H2 headings.
-        - For article-style content, exceed 300 words.
-        - Meta title must be 50-60 characters.
-        - Meta description must be 120-160 characters.
-
-        Writing rules:
-        - Sound human, editorial, persuasive, and not robotic.
-        - Avoid keyword stuffing. Use the exact keyword in strategic positions, then use natural related wording elsewhere.
-        - Keep paragraphs short and scannable.
-        - Add one Markdown bullet list when it fits naturally.
-        - Bold all H1/H2 text and 2 to 4 additional important phrases naturally.
-        - End with a concise CTA when appropriate.
-
-        Output rules:
-        - Return only the final content. No explanations, no labels, no JSON/XML, no code fences.
-        - Line 1: meta title only.
-        - Line 2: meta description only.
-        - Line 3: blank line.
-        - Line 4 onward: Markdown body starting with exactly one H1 in this format: # **Heading**
-        - Every H2 must use this format: ## **Heading**
+        Global rules:
+        - Return only final content. No explanations, no labels, no JSON/XML, no code fences.
+        - Write in the requested language.
+        - Follow the platform strategy, tone rules, SEO rules, and output contract exactly.
+        - Keep the copy natural, useful, conversion-oriented, and not robotic.
+        - Never ramble or drift away from the user's requested platform intent.
         """;
 
     private static final String USER_PROMPT_TEMPLATE = """
-        Create marketing content with these inputs:
+        Build content from this structured form input:
         - Platform: {platform}
         - Tone: {tone}
         - Main keyword: {keyword}
         - Target length: {length_limit}
         - Language: {language}
-        - Exact keyword usage target: {keyword_usage_target}
-        - Length guidance: {length_guidance}
 
-        Optimize for this checker:
-        - Keyword appears in H1
-        - Keyword density between 1% and 3%
-        - At least two H2 headings
-        - Meta title is valid
-        - Meta description is valid
+        Platform strategy:
+        {platform_strategy}
 
-        Additional instructions:
-        - Write in the requested language.
-        - Make the meta title compelling and the meta description persuasive.
-        - Make the H1 read like a real headline, not a forced SEO phrase.
-        - Use the exact keyword once in the introduction, once in a middle section, and once near the conclusion when natural.
-        - Keep exact-keyword usage close to the target above.
-        - Open with a strong hook and keep flow smooth and human.
+        Tone rules:
+        {tone_strategy}
 
-        Return only this structure:
-        <meta title only>
-        <meta description only>
+        Length guidance:
+        {length_guidance}
 
-        # **<H1 containing the exact main keyword>**
-        <body with at least two ## **H2** sections>
+        SEO and keyword rules:
+        {seo_rules}
+
+        Output contract:
+        {output_contract}
         """;
 
     private final CampaignRepository campaignRepository;
@@ -191,6 +165,7 @@ public class ContentServiceImpl implements ContentService {
     public ContentResponse updateBanner(UUID id, UpdateBannerRequest request, UUID userId) {
         Content content = findOwnedContent(id, userId);
         content.setBannerUrl(request.bannerUrl());
+        content.setBannerConfig(request.bannerConfig());
 
         Content saved = contentRepository.save(content);
         log.info("Banner updated for contentId={}, userId={}", saved.getId(), userId);
@@ -213,14 +188,18 @@ public class ContentServiceImpl implements ContentService {
     }
 
     private Prompt buildPrompt(GenerateContentRequest request) {
+        PlatformProfile platformProfile = resolvePlatformProfile(request.platform());
         Map<String, Object> model = Map.of(
                 "platform", request.platform(),
                 "tone", request.tone(),
                 "keyword", request.keyword(),
                 "length_limit", request.lengthLimit() != null ? request.lengthLimit() + " words" : "platform-appropriate",
                 "language", request.language(),
-                "keyword_usage_target", buildKeywordUsageTarget(request.lengthLimit()),
-                "length_guidance", buildLengthGuidance(request.lengthLimit())
+                "platform_strategy", buildPlatformStrategy(platformProfile, request),
+                "tone_strategy", buildToneStrategy(request.tone()),
+                "length_guidance", buildLengthGuidance(platformProfile, request.lengthLimit()),
+                "seo_rules", buildSeoRules(platformProfile, request.lengthLimit()),
+                "output_contract", buildOutputContract(platformProfile)
         );
 
         SystemPromptTemplate systemPromptTemplate = new SystemPromptTemplate(SYSTEM_PROMPT_TEMPLATE);
@@ -323,38 +302,283 @@ public class ContentServiceImpl implements ContentService {
         );
     }
 
-    private String buildKeywordUsageTarget(Integer lengthLimit) {
-        if (lengthLimit == null) {
-            return "usually 4 to 6 exact-match mentions for a 350-600 word article";
+    private PlatformProfile resolvePlatformProfile(String platform) {
+        if (platform == null) {
+            return PlatformProfile.SEO_LONG_FORM;
         }
 
-        if (lengthLimit < 180) {
+        String normalized = platform.trim().toLowerCase();
+        return switch (normalized) {
+            case "facebook", "facebook page", "instagram", "instagram post" -> PlatformProfile.SOCIAL_POST;
+            case "website", "website blog", "blog" -> PlatformProfile.SEO_LONG_FORM;
+            case "email", "email marketing" -> PlatformProfile.EMAIL_COPY;
+            case "tiktok", "tiktok script" -> PlatformProfile.SHORT_SCRIPT;
+            case "google ads" -> PlatformProfile.AD_COPY;
+            default -> PlatformProfile.SEO_LONG_FORM;
+        };
+    }
+
+    private String buildPlatformStrategy(PlatformProfile platformProfile, GenerateContentRequest request) {
+        return switch (platformProfile) {
+            case SEO_LONG_FORM -> """
+                    - Create a blog-style article that is informative, well-structured, and SEO-friendly.
+                    - Use exactly one H1 and at least two meaningful H2 headings.
+                    - Open with a strong hook and make sure the first paragraph naturally includes the exact main keyword.
+                    - Develop clear sections and end with a concise CTA.
+                    - Include one natural Markdown bullet list when useful.
+                    - Make the copy feel editorial, not generic SEO filler.
+                    """;
+            case SOCIAL_POST -> """
+                    - Create a social-media post suitable for the selected platform.
+                    - Lead with a strong hook in the first 1 to 2 lines.
+                    - The first sentence of the body must contain the exact main keyword naturally.
+                    - Keep the body concise, punchy, and easy to scan on mobile.
+                    - Prioritize clarity, audience resonance, scanability, and CTA over long-form structure.
+                    - Use at least three short paragraphs or one bullet list so the post is visibly scannable.
+                    - End with an explicit CTA such as Learn more, Shop now, Discover more, Contact us, Get started, Xem ngay, Tim hieu, Dang ky, or Mua ngay when natural in the requested language.
+                    - Do not force blog-style H1 or H2 headings for this platform.
+                    """;
+            case EMAIL_COPY -> """
+                    - Write marketing copy suitable for an email campaign.
+                    - Treat line 1 like a strong subject line and line 2 like preview text.
+                    - Make the opening immediately relevant and benefit-led.
+                    - The first sentence of the body must contain the exact main keyword naturally.
+                    - Keep the body skimmable with at least four short paragraphs or one bullet list.
+                    - Use a polished, persuasive structure with a clear CTA near the end.
+                    - Do not force blog-style H1 or H2 headings for this platform.
+                    """;
+            case SHORT_SCRIPT -> """
+                    - Write in a spoken, energetic style suitable for a short-form video script.
+                    - Treat line 1 like the title or opening hook and line 2 like a supporting teaser.
+                    - Make the opening hook fast and attention-grabbing.
+                    - The first spoken line of the body must contain the exact main keyword naturally.
+                    - Use at least three short spoken beats or one short bullet list so the rhythm is clearly segmented.
+                    - Include a clear ending CTA such as Watch now, Learn more, Explore, Get started, Xem ngay, Tim hieu, or Bat dau when natural in the requested language.
+                    - Do not force blog-style H1 or H2 headings for this platform.
+                    """;
+            case AD_COPY -> """
+                    - Write conversion-focused copy with high clarity and strong commercial intent.
+                    - Treat line 1 like a strong primary headline and line 2 like a supporting ad description.
+                    - The first sentence of the body must contain the exact main keyword naturally.
+                    - Prioritize value proposition, urgency, specificity, and CTA.
+                    - Keep lines tight and avoid unnecessary exposition.
+                    - Use a direct CTA such as Learn more, Shop now, Buy now, Contact us, Get started, Xem ngay, Tim hieu, Lien he, or Mua ngay when natural in the requested language.
+                    - Use compact body copy that reads like ad copy, not like a blog article.
+                    - Do not force blog-style H1 or H2 headings for this platform.
+                    """;
+        };
+    }
+
+    private String buildToneStrategy(String tone) {
+        if (tone == null || tone.isBlank()) {
+            return """
+                    - Keep the tone balanced, clear, and audience-friendly.
+                    - Avoid sounding robotic or bland.
+                    """;
+        }
+
+        return switch (tone.trim().toLowerCase()) {
+            case "professional" -> """
+                    - Sound credible, polished, and confident.
+                    - Prefer clarity and authority over hype.
+                    """;
+            case "funny" -> """
+                    - Add light humor and charm without sounding childish.
+                    - Keep the joke density controlled so the message still converts.
+                    """;
+            case "persuasive" -> """
+                    - Be benefit-led, convincing, and action-oriented.
+                    - Use urgency or contrast naturally when helpful.
+                    """;
+            case "friendly" -> """
+                    - Sound warm, approachable, and easy to trust.
+                    - Keep the wording natural and conversational.
+                    """;
+            case "creative" -> """
+                    - Use fresh phrasing and vivid wording while staying clear.
+                    - Aim for memorable but still commercially useful copy.
+                    """;
+            case "minimalist" -> """
+                    - Use concise, clean sentences with minimal fluff.
+                    - Keep the message sharp and visually light.
+                    """;
+            default -> """
+                    - Match the requested tone faithfully.
+                    - Keep the copy natural and audience-appropriate.
+                    """;
+        };
+    }
+
+    private String buildLengthGuidance(PlatformProfile platformProfile, Integer lengthLimit) {
+        if (lengthLimit != null) {
+            return "Aim for around " + lengthLimit + " words while keeping the copy natural and appropriately formatted for the platform.";
+        }
+
+        return switch (platformProfile) {
+            case SEO_LONG_FORM -> "Aim for roughly 450 to 700 words unless the topic strongly needs a different length.";
+            case SOCIAL_POST -> "Keep the copy concise and mobile-friendly, usually around 120 to 280 words.";
+            case EMAIL_COPY -> "Aim for roughly 180 to 350 words with fast readability.";
+            case SHORT_SCRIPT -> "Aim for roughly 120 to 220 words in a spoken rhythm.";
+            case AD_COPY -> "Aim for roughly 80 to 180 words with very high signal density.";
+        };
+    }
+
+    private String buildSeoRules(PlatformProfile platformProfile, Integer lengthLimit) {
+        String keywordUsageTarget = buildKeywordUsageTarget(platformProfile, lengthLimit);
+        return switch (platformProfile) {
+            case SEO_LONG_FORM -> """
+                    - Use the exact main keyword in the meta title, meta description, and H1.
+                    - Keep exact-keyword density roughly between 1%% and 3%%.
+                    - Make the meta title compelling and keep it between 50 and 60 characters.
+                    - Make the meta description persuasive and keep it between 120 and 160 characters.
+                    - The H1 must contain the exact main keyword naturally.
+                    - Include at least two meaningful H2 headings.
+                    - Exceed 300 words and make the sections substantial.
+                    - Use the exact keyword once in the introduction, once in a middle section, and once near the conclusion when natural.
+                    - Keep exact-match keyword usage close to this target: %s
+                    - After strategic exact-match placements, use natural related wording elsewhere.
+                    """.formatted(keywordUsageTarget);
+            case EMAIL_COPY -> """
+                    - Treat line 1 as the email subject line and line 2 as preview text.
+                    - Include the exact main keyword in the subject line, preview text, and opening email copy.
+                    - The first sentence of the body must contain the exact main keyword.
+                    - Keep keyword usage natural, usually within this target: %s
+                    - Keep keyword density controlled and usually below 3.5%%.
+                    - Make the subject line compelling and keep it between 50 and 60 characters.
+                    - Make the preview text persuasive and keep it between 120 and 160 characters.
+                    - Use sections, bullets, or at least four short paragraph breaks for scanability.
+                    - Exceed 180 words.
+                    """.formatted(keywordUsageTarget);
+            case SOCIAL_POST -> """
+                    - Mention the exact main keyword in the first sentence of the body.
+                    - Keep keyword usage natural, usually within this target: %s
+                    - Use at least three short paragraphs, or a bullet list, to improve scanability.
+                    - Exceed 120 words.
+                    - Include a clear CTA by the end using an action phrase.
+                    - Do not force formal SEO density or blog heading rules if they hurt the natural social flow.
+                    """.formatted(keywordUsageTarget);
+            case SHORT_SCRIPT -> """
+                    - Mention the exact main keyword in the first spoken line of the body.
+                    - Keep keyword usage natural, usually within this target: %s
+                    - Structure the body as at least three short spoken beats or short script sections.
+                    - Exceed 100 words.
+                    - Include a clear CTA or audience prompt near the end using an action phrase.
+                    - Do not force blog-style SEO heading rules for this platform.
+                    """.formatted(keywordUsageTarget);
+            case AD_COPY -> """
+                    - Mention the exact main keyword in the first sentence of the body.
+                    - Keep keyword usage natural, usually within this target: %s
+                    - Exceed 80 words while staying concise and commercially sharp.
+                    - Include a direct CTA using an action phrase.
+                    - Prioritize conversion clarity over blog-style SEO structure.
+                    """.formatted(keywordUsageTarget);
+        };
+    }
+
+    private String buildOutputContract(PlatformProfile platformProfile) {
+        return switch (platformProfile) {
+            case SEO_LONG_FORM -> """
+                    - Return only the final result in this exact structure.
+                    - Line 1: meta title only.
+                    - Line 2: meta description only.
+                    - Line 3: blank line.
+                    - Line 4 onward: Markdown article body.
+                    - Start the body with exactly one H1 in this format: # **Heading**
+                    - Use at least two H2 headings in this format: ## **Heading**
+                    - Bold 2 to 4 additional important phrases naturally inside the body.
+                    - Do not print labels such as Meta Title, Meta Description, H1, H2, or CTA.
+                    """;
+            case EMAIL_COPY -> """
+                    - Return only the final result in this exact structure.
+                    - Line 1: subject line only.
+                    - Line 2: preview text only.
+                    - Line 3: blank line.
+                    - Line 4 onward: email body in clean Markdown-friendly paragraphs or bullets.
+                    - Do not print labels such as Subject Line, Preview Text, Body, or CTA.
+                    """;
+            case SOCIAL_POST -> """
+                    - Return only the final result in this exact structure.
+                    - Line 1: short headline or hook line only.
+                    - Line 2: short supporting teaser line only.
+                    - Line 3: blank line.
+                    - Line 4 onward: the full social post body with short paragraphs, line breaks, or bullets.
+                    - Do not print labels such as Headline, Teaser, Post, or CTA.
+                    """;
+            case SHORT_SCRIPT -> """
+                    - Return only the final result in this exact structure.
+                    - Line 1: title or opening hook only.
+                    - Line 2: short supporting teaser line only.
+                    - Line 3: blank line.
+                    - Line 4 onward: script body using short spoken beats and natural line breaks.
+                    - Do not print labels such as Hook, Script, Scene, or CTA.
+                    """;
+            case AD_COPY -> """
+                    - Return only the final result in this exact structure.
+                    - Line 1: primary headline only.
+                    - Line 2: supporting ad description only.
+                    - Line 3: blank line.
+                    - Line 4 onward: compact ad body copy.
+                    - Do not print labels such as Headline, Description, Body, or CTA.
+                    """;
+        };
+    }
+
+    private String buildKeywordUsageTarget(PlatformProfile platformProfile, Integer lengthLimit) {
+        if (platformProfile == PlatformProfile.SEO_LONG_FORM) {
+            if (lengthLimit == null) {
+                return "4 to 6 exact-match mentions";
+            }
+
+            if (lengthLimit < 300) {
+                return "2 to 3 exact-match mentions";
+            }
+
+            if (lengthLimit < 500) {
+                return "3 to 4 exact-match mentions";
+            }
+
+            if (lengthLimit < 800) {
+                return "4 to 6 exact-match mentions";
+            }
+
+            return "5 to 7 exact-match mentions";
+        }
+
+        if (platformProfile == PlatformProfile.AD_COPY) {
+            if (lengthLimit == null || lengthLimit <= 120) {
+                return "1 to 2 exact-match mentions";
+            }
+
+            return "1 to 3 exact-match mentions";
+        }
+
+        if (platformProfile == PlatformProfile.EMAIL_COPY) {
+            if (lengthLimit == null || lengthLimit <= 220) {
+                return "1 to 3 exact-match mentions";
+            }
+
+            return "2 to 4 exact-match mentions";
+        }
+
+        if (lengthLimit == null || lengthLimit <= 180) {
             return "1 to 2 exact-match mentions";
         }
 
-        if (lengthLimit < 300) {
+        if (lengthLimit <= 320) {
             return "2 to 3 exact-match mentions";
         }
 
-        if (lengthLimit < 450) {
-            return "3 to 4 exact-match mentions";
-        }
-
-        if (lengthLimit < 650) {
-            return "4 to 6 exact-match mentions";
-        }
-
-        return "5 to 7 exact-match mentions";
-    }
-
-    private String buildLengthGuidance(Integer lengthLimit) {
-        if (lengthLimit == null) {
-            return "if the platform supports article-style writing, aim for roughly 350-600 words";
-        }
-
-        return "aim for around " + lengthLimit + " words while keeping the copy natural";
+        return "3 to 4 exact-match mentions";
     }
 
     private record GeneratedContentParts(String body, SeoMetadata seoMetadata) {
+    }
+
+    private enum PlatformProfile {
+        SEO_LONG_FORM,
+        SOCIAL_POST,
+        EMAIL_COPY,
+        SHORT_SCRIPT,
+        AD_COPY
     }
 }

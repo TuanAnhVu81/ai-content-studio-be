@@ -5,6 +5,7 @@ import com.portfolio.aicontentstudio.core.exception.AppException;
 import com.portfolio.aicontentstudio.modules.ai_log.service.AiUsageLogService;
 import com.portfolio.aicontentstudio.modules.campaign.entity.Campaign;
 import com.portfolio.aicontentstudio.modules.campaign.repository.CampaignRepository;
+import com.portfolio.aicontentstudio.modules.content.dto.BannerConfig;
 import com.portfolio.aicontentstudio.modules.content.dto.ContentResponse;
 import com.portfolio.aicontentstudio.modules.content.dto.GenerateContentRequest;
 import com.portfolio.aicontentstudio.modules.content.dto.PromptConfig;
@@ -104,7 +105,7 @@ class ContentServiceImplTest {
         GenerateContentRequest request = createGenerateContentRequest(campaignId, 150, "Vietnamese");
         User user = createUser(userId);
         Campaign campaign = createCampaign(campaignId, userId);
-        ContentResponse expectedResponse = createContentResponse(contentId, campaignId, request.keyword(), request.language(), null, null);
+        ContentResponse expectedResponse = createContentResponse(contentId, campaignId, request.keyword(), request.language(), null, null, null);
         ChatResponseMetadata metadata = createChatResponseMetadata("gemini-3-flash", 120, 250, 370);
         String generatedOutput = """
                 Student Laptop Deal for Back-to-School Savings
@@ -133,26 +134,30 @@ class ContentServiceImplTest {
         verify(chatModel, times(1)).call(promptCaptor.capture());
         Prompt capturedPrompt = promptCaptor.getValue();
         assertThat(capturedPrompt.getSystemMessage().getText())
-                .contains("Senior SEO Copywriter")
-                .contains("Use the exact main keyword in the meta title, meta description, and H1")
-                .contains("Keep exact-keyword density roughly between 1% and 3%")
-                .contains("Meta title must be 50-60 characters")
-                .contains("Meta description must be 120-160 characters")
-                .contains("Line 4 onward: Markdown body starting with exactly one H1 in this format: # **Heading**")
-                .contains("Every H2 must use this format: ## **Heading**");
+                .contains("backend prompt engine of an AI Content Studio")
+                .contains("Follow the platform strategy, tone rules, SEO rules, and output contract exactly")
+                .contains("Never ramble or drift away from the user's requested platform intent");
         assertThat(capturedPrompt.getUserMessage().getText())
                 .contains("Platform: Facebook")
                 .contains("Tone: Friendly")
                 .contains("Main keyword: student laptop deal")
                 .contains("Target length: 150 words")
                 .contains("Language: Vietnamese")
-                .contains("Exact keyword usage target: 1 to 2 exact-match mentions")
-                .contains("Length guidance: aim for around 150 words while keeping the copy natural")
-                .contains("Keep exact-keyword usage close to the target above")
-                .contains("<meta title only>")
-                .contains("<meta description only>")
-                .contains("# **<H1 containing the exact main keyword>**")
-                .contains("<body with at least two ## **H2** sections>");
+                .contains("Platform strategy:")
+                .contains("Lead with a strong hook in the first 1 to 2 lines")
+                .contains("Do not force blog-style H1 or H2 headings for this platform")
+                .contains("Tone rules:")
+                .contains("Sound warm, approachable, and easy to trust")
+                .contains("Length guidance:")
+                .contains("Aim for around 150 words while keeping the copy natural")
+                .contains("SEO and keyword rules:")
+                .contains("Keep keyword usage natural, usually within this target: 1 to 2 exact-match mentions")
+                .contains("Mention the exact main keyword in the first sentence of the body")
+                .contains("Include a clear CTA by the end")
+                .contains("Output contract:")
+                .contains("Line 1: short headline or hook line only.")
+                .contains("Line 2: short supporting teaser line only.")
+                .contains("Line 4 onward: the full social post body with short paragraphs, line breaks, or bullets.");
 
         verify(contentRepository, times(1)).save(contentCaptor.capture());
         Content capturedContent = contentCaptor.getValue();
@@ -188,7 +193,7 @@ class ContentServiceImplTest {
         GenerateContentRequest request = createGenerateContentRequest(campaignId, null, "English");
         User user = createUser(userId);
         Campaign campaign = createCampaign(campaignId, userId);
-        ContentResponse expectedResponse = createContentResponse(contentId, campaignId, request.keyword(), request.language(), null, null);
+        ContentResponse expectedResponse = createContentResponse(contentId, campaignId, request.keyword(), request.language(), null, null, null);
 
         ChatResponseMetadata metadata = org.mockito.Mockito.mock(ChatResponseMetadata.class);
         given(metadata.getUsage()).willReturn(null);
@@ -333,7 +338,7 @@ class ContentServiceImplTest {
         UUID campaignId = UUID.randomUUID();
         Pageable pageable = PageRequest.of(0, 10);
         Content content = createContent(UUID.randomUUID(), campaignId, userId);
-        ContentResponse expectedResponse = createContentResponse(content.getId(), campaignId, content.getTargetKeyword(), "Vietnamese", content.getSeoMetadata(), content.getBannerUrl());
+        ContentResponse expectedResponse = createContentResponse(content.getId(), campaignId, content.getTargetKeyword(), "Vietnamese", content.getSeoMetadata(), content.getBannerUrl(), content.getBannerConfig());
         Page<Content> contentPage = new PageImpl<>(List.of(content));
 
         given(campaignRepository.existsByIdAndUserId(campaignId, userId)).willReturn(true);
@@ -375,7 +380,7 @@ class ContentServiceImplTest {
         UUID userId = UUID.randomUUID();
         UUID campaignId = UUID.randomUUID();
         Content content = createContent(UUID.randomUUID(), campaignId, userId);
-        ContentResponse expectedResponse = createContentResponse(content.getId(), campaignId, content.getTargetKeyword(), "Vietnamese", content.getSeoMetadata(), content.getBannerUrl());
+        ContentResponse expectedResponse = createContentResponse(content.getId(), campaignId, content.getTargetKeyword(), "Vietnamese", content.getSeoMetadata(), content.getBannerUrl(), content.getBannerConfig());
 
         given(contentRepository.findByIdAndUserId(content.getId(), userId)).willReturn(Optional.of(content));
         given(contentMapper.toResponse(content)).willReturn(expectedResponse);
@@ -416,7 +421,7 @@ class ContentServiceImplTest {
                 "Updated generated text",
                 new SeoMetadata(95.0, 2.1, false, false, 0, null, null, false, false, List.of("Add an H1 heading"))
         );
-        ContentResponse expectedResponse = createContentResponse(contentId, campaignId, content.getTargetKeyword(), "Vietnamese", new SeoMetadata(60.0, 2.1, false, false, 0, null, null, false, false, List.of("Add an H1 heading")), null);
+        ContentResponse expectedResponse = createContentResponse(contentId, campaignId, content.getTargetKeyword(), "Vietnamese", new SeoMetadata(60.0, 2.1, false, false, 0, null, null, false, false, List.of("Add an H1 heading")), null, null);
 
         given(contentRepository.findByIdAndUserId(contentId, userId)).willReturn(Optional.of(content));
         given(contentRepository.save(any(Content.class))).willAnswer(invocation -> invocation.getArgument(0));
@@ -441,7 +446,7 @@ class ContentServiceImplTest {
         UUID contentId = UUID.randomUUID();
         Content content = createContent(contentId, campaignId, userId);
         UpdateContentRequest request = new UpdateContentRequest("Updated generated text", null);
-        ContentResponse expectedResponse = createContentResponse(contentId, campaignId, content.getTargetKeyword(), "Vietnamese", null, null);
+        ContentResponse expectedResponse = createContentResponse(contentId, campaignId, content.getTargetKeyword(), "Vietnamese", null, null, null);
 
         given(contentRepository.findByIdAndUserId(contentId, userId)).willReturn(Optional.of(content));
         given(contentRepository.save(any(Content.class))).willAnswer(invocation -> invocation.getArgument(0));
@@ -468,8 +473,15 @@ class ContentServiceImplTest {
         UUID campaignId = UUID.randomUUID();
         UUID contentId = UUID.randomUUID();
         Content content = createContent(contentId, campaignId, userId);
-        UpdateBannerRequest request = new UpdateBannerRequest("https://cdn.example.com/banner.jpg");
-        ContentResponse expectedResponse = createContentResponse(contentId, campaignId, content.getTargetKeyword(), "Vietnamese", content.getSeoMetadata(), request.bannerUrl());
+        BannerConfig bannerConfig = new BannerConfig(
+                "feed",
+                "feed-minimal",
+                "Student laptop deal for smarter campus life",
+                "Discover a budget-friendly student laptop deal with practical performance and all-day battery life.",
+                "Discover more"
+        );
+        UpdateBannerRequest request = new UpdateBannerRequest("https://cdn.example.com/banner.jpg", bannerConfig);
+        ContentResponse expectedResponse = createContentResponse(contentId, campaignId, content.getTargetKeyword(), "Vietnamese", content.getSeoMetadata(), request.bannerUrl(), bannerConfig);
 
         given(contentRepository.findByIdAndUserId(contentId, userId)).willReturn(Optional.of(content));
         given(contentRepository.save(any(Content.class))).willAnswer(invocation -> invocation.getArgument(0));
@@ -482,6 +494,7 @@ class ContentServiceImplTest {
         verify(contentRepository, times(1)).save(contentCaptor.capture());
         Content capturedContent = contentCaptor.getValue();
         assertThat(capturedContent.getBannerUrl()).isEqualTo("https://cdn.example.com/banner.jpg");
+        assertThat(capturedContent.getBannerConfig()).isEqualTo(bannerConfig);
         assertThat(actualResponse).isEqualTo(expectedResponse);
     }
 
@@ -580,6 +593,13 @@ class ContentServiceImplTest {
                 .promptConfig(new PromptConfig("Facebook", "Friendly", "150", "Vietnamese"))
                 .generatedText("Existing generated text")
                 .seoMetadata(new SeoMetadata(70.0, 1.8, true, false, 0, null, null, false, false, List.of("Add one more heading")))
+                .bannerConfig(new BannerConfig(
+                        "feed",
+                        "feed-minimal",
+                        "Existing campaign banner",
+                        "Existing supporting copy",
+                        "Discover more"
+                ))
                 .status(ContentStatus.DRAFT)
                 .build();
         content.setId(contentId);
@@ -588,7 +608,7 @@ class ContentServiceImplTest {
         return content;
     }
 
-    private ContentResponse createContentResponse(UUID contentId, UUID campaignId, String keyword, String language, SeoMetadata seoMetadata, String bannerUrl) {
+    private ContentResponse createContentResponse(UUID contentId, UUID campaignId, String keyword, String language, SeoMetadata seoMetadata, String bannerUrl, BannerConfig bannerConfig) {
         return new ContentResponse(
                 contentId,
                 campaignId,
@@ -598,6 +618,7 @@ class ContentServiceImplTest {
                 "Mapped content response",
                 seoMetadata,
                 bannerUrl,
+                bannerConfig,
                 ContentStatus.DRAFT,
                 LocalDateTime.now(),
                 LocalDateTime.now()
