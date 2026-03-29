@@ -1,5 +1,6 @@
 package com.portfolio.aicontentstudio.config;
 
+import com.portfolio.aicontentstudio.config.properties.RefreshTokenCookieProperties;
 import com.portfolio.aicontentstudio.security.JwtAuthEntryPoint;
 import com.portfolio.aicontentstudio.security.JwtAuthFilter;
 import jakarta.servlet.DispatcherType;
@@ -33,6 +34,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.util.List;
@@ -50,6 +52,7 @@ public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
     private final JwtAuthEntryPoint jwtAuthEntryPoint;
     private final UserDetailsService userDetailsService;
+    private final RefreshTokenCookieProperties refreshTokenCookieProperties;
 
     @Value("${app.cors.allowed-origins:http://localhost:5173}")
     private List<String> allowedOrigins;
@@ -60,7 +63,7 @@ public class SecurityConfig {
         return http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .csrfTokenRepository(csrfTokenRepository())
                         .requireCsrfProtectionMatcher(cookieBackedEndpointMatcher())
                 )
                 .sessionManagement(session ->
@@ -99,6 +102,21 @@ public class SecurityConfig {
                 PathPatternRequestMatcher.withDefaults().matcher(org.springframework.http.HttpMethod.POST, "/api/v1/auth/logout"),
                 PathPatternRequestMatcher.withDefaults().matcher(org.springframework.http.HttpMethod.PATCH, "/api/v1/auth/change-password")
         );
+    }
+
+    @Bean
+    public CookieCsrfTokenRepository csrfTokenRepository() {
+        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        repository.setCookiePath("/");
+        repository.setCookieCustomizer(builder -> {
+            builder.secure(refreshTokenCookieProperties.isSecure());
+            builder.sameSite(refreshTokenCookieProperties.getSameSite());
+
+            if (StringUtils.hasText(refreshTokenCookieProperties.getDomain())) {
+                builder.domain(refreshTokenCookieProperties.getDomain());
+            }
+        });
+        return repository;
     }
 
     @Bean
