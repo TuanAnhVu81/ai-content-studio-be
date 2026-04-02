@@ -18,12 +18,16 @@ import com.portfolio.aicontentstudio.security.JwtProvider;
 import com.portfolio.aicontentstudio.security.SecurityContextHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationServiceException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -78,13 +82,25 @@ public class AuthServiceImpl implements AuthService {
             );
         } catch (DisabledException ex) {
             throw new AppException(ErrorCode.USER_DISABLED);
+        } catch (BadCredentialsException | UsernameNotFoundException ex) {
+            throw new AppException(ErrorCode.INVALID_CREDENTIALS);
+        } catch (AuthenticationServiceException ex) {
+            log.warn("Authentication service unavailable while logging in email={}", request.email(), ex);
+            throw new AppException(ErrorCode.AUTH_SERVICE_UNAVAILABLE);
         } catch (AuthenticationException ex) {
             throw new AppException(ErrorCode.INVALID_CREDENTIALS);
         }
 
-        User user = userRepository.findWithRolesByEmail(request.email())
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-        UserDetails userDetails = userDetailsService.loadUserByUsername(request.email());
+        final User user;
+        final UserDetails userDetails;
+        try {
+            user = userRepository.findWithRolesByEmail(request.email())
+                    .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+            userDetails = userDetailsService.loadUserByUsername(request.email());
+        } catch (DataAccessException ex) {
+            log.warn("Database unavailable while finalizing login for email={}", request.email(), ex);
+            throw new AppException(ErrorCode.AUTH_SERVICE_UNAVAILABLE);
+        }
 
         String accessToken = jwtProvider.generateAccessToken(userDetails);
         RefreshSessionResult refreshSessionResult = refreshTokenSessionService.createSession(user.getId(), clientMetadata);
@@ -96,18 +112,31 @@ public class AuthServiceImpl implements AuthService {
     public AuthSessionResult refreshToken(String refreshToken, ClientMetadata clientMetadata) {
         RefreshSessionResult refreshSessionResult = refreshTokenSessionService.rotateSession(refreshToken, clientMetadata);
 
-        User user = userRepository.findWithRolesById(refreshSessionResult.userId())
-                .orElseThrow(() -> {
-                    refreshTokenSessionService.revokeAllSessions(refreshSessionResult.userId());
-                    return new AppException(ErrorCode.USER_NOT_FOUND);
-                });
+        final User user;
+        try {
+            user = userRepository.findWithRolesById(refreshSessionResult.userId())
+                    .orElseThrow(() -> {
+                        refreshTokenSessionService.revokeAllSessions(refreshSessionResult.userId());
+                        return new AppException(ErrorCode.USER_NOT_FOUND);
+                    });
+        } catch (DataAccessException ex) {
+            log.warn("Database unavailable while loading user for refreshToken, userId={}",
+                    refreshSessionResult.userId(), ex);
+            throw new AppException(ErrorCode.AUTH_SERVICE_UNAVAILABLE);
+        }
 
         if (user.getStatus() != AccountStatus.ACTIVE) {
             refreshTokenSessionService.revokeAllSessions(user.getId());
             throw new AppException(ErrorCode.USER_DISABLED);
         }
 
-        UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
+        final UserDetails userDetails;
+        try {
+            userDetails = userDetailsService.loadUserByUsername(user.getEmail());
+        } catch (DataAccessException ex) {
+            log.warn("Database unavailable while building refreshed auth context for userId={}", user.getId(), ex);
+            throw new AppException(ErrorCode.AUTH_SERVICE_UNAVAILABLE);
+        }
         String accessToken = jwtProvider.generateAccessToken(userDetails);
 
         return new AuthSessionResult(accessToken, refreshSessionResult.refreshToken(), toUserResponse(user));
