@@ -8,23 +8,22 @@ spring:
       # Supabase session pooler tends to close idle connections earlier than a typical direct DB.
       # Keep the pool small and recycle connections more aggressively for Render production.
       pool-name: AiContentStudioHikariPool
-      maximum-pool-size: ${DB_MAX_POOL_SIZE:5}
-      minimum-idle: ${DB_MIN_IDLE:0}
-      connection-timeout: ${DB_CONNECTION_TIMEOUT_MS:15000}
+      maximum-pool-size: ${DB_MAX_POOL_SIZE:3}
+      minimum-idle: ${DB_MIN_IDLE:1}
+      connection-timeout: ${DB_CONNECTION_TIMEOUT_MS:10000}
       validation-timeout: ${DB_VALIDATION_TIMEOUT_MS:5000}
       idle-timeout: ${DB_IDLE_TIMEOUT_MS:30000}
-      max-lifetime: ${DB_MAX_LIFETIME_MS:120000}
+      max-lifetime: ${DB_MAX_LIFETIME_MS:300000}
       keepalive-time: ${DB_KEEPALIVE_TIME_MS:30000}
-      # Do not fail the whole app immediately while Render + Supabase pooler is still warming up.
-      initialization-fail-timeout: -1
+      # Fail fast enough for Render to retry/redeploy instead of hanging until port scan timeout.
+      initialization-fail-timeout: ${DB_INIT_FAIL_TIMEOUT_MS:10000}
       data-source-properties:
         tcpKeepAlive: true
-        connectTimeout: ${DB_JDBC_CONNECT_TIMEOUT_SECONDS:15}
+        connectTimeout: ${DB_JDBC_CONNECT_TIMEOUT_SECONDS:10}
         socketTimeout: ${DB_JDBC_SOCKET_TIMEOUT_SECONDS:30}
 
   jpa:
     show-sql: false
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       # Production schema is managed by Flyway/local migrations; avoid blocking startup on boot-time validation.
       ddl-auto: none
