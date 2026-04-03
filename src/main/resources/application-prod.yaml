@@ -29,10 +29,6 @@ spring:
       # Production schema is managed by Flyway/local migrations; avoid blocking startup on boot-time validation.
       ddl-auto: none
     properties:
-      jakarta:
-        persistence:
-          jdbc:
-            url: ${DB_URL}
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         boot:
