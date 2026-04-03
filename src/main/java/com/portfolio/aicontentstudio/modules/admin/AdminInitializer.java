@@ -34,9 +34,17 @@ public class AdminInitializer implements CommandLineRunner {
     @Value("${app.admin.initial-password:AdminPass@123}")
     private String adminPassword;
 
+    @Value("${app.admin.bootstrap-enabled:false}")
+    private boolean bootstrapEnabled;
+
     @Override
     @Transactional
     public void run(String... args) {
+        if (!bootstrapEnabled) {
+            log.info("Admin bootstrap is disabled. Skipping admin initialization.");
+            return;
+        }
+
         log.info("Checking for system administrator accounts...");
 
         // Strategy: We check if ANY user has ROLE_ADMIN. 

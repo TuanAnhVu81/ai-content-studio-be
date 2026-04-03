@@ -24,6 +24,7 @@ spring:
 
   jpa:
     show-sql: false
+    open-in-view: false
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       # Production schema is managed by Flyway/local migrations; avoid blocking startup on boot-time validation.
